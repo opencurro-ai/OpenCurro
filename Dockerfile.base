@@ -1,0 +1,17 @@
+# Base image Dockerfile for React + Python fullstack (shadcn variant)
+# This image pre-installs frontend npm dependencies for faster user builds
+# Build this image once and push to your artifact registry
+
+FROM node:20-slim AS base
+
+WORKDIR /app/frontend
+
+# Copy frontend package files
+COPY frontend/package*.json ./
+COPY frontend/bun.lock* ./
+
+# Install ALL frontend dependencies (including devDependencies for build)
+RUN npm install
+
+# The base image now has node_modules pre-installed
+# User code will be copied on top during actual build

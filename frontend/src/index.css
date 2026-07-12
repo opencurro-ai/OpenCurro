@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@500;600;700;800&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --radius: 1.25rem;
+  --background: oklch(0.11 0.02 240);
+  --foreground: oklch(0.96 0.01 220);
+  --card: oklch(0.16 0.03 240);
+  --card-foreground: oklch(0.96 0.01 220);
+  --popover: oklch(0.15 0.03 240);
+  --popover-foreground: oklch(0.96 0.01 220);
+  --primary: oklch(0.83 0.11 196);
+  --primary-foreground: oklch(0.14 0.02 240);
+  --secondary: oklch(0.22 0.04 245);
+  --secondary-foreground: oklch(0.93 0.01 220);
+  --muted: oklch(0.18 0.03 240);
+  --muted-foreground: oklch(0.72 0.02 220);
+  --accent: oklch(0.2 0.06 215);
+  --accent-foreground: oklch(0.95 0.02 220);
+  --destructive: oklch(0.65 0.18 22);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 8%);
+  --ring: oklch(0.83 0.11 196 / 60%);
+}
+
+@keyframes shine {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html, body, #root {
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+  }
+
+  ::selection {
+    background: rgba(103, 232, 249, 0.3);
+    color: white;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
