@@ -98,11 +98,14 @@ export function useAgentChat() {
               name: typeof data.name === 'string' ? data.name : 'tool',
               label: typeof data.label === 'string' ? data.label : 'Tool activity',
               filePath: typeof data.file_path === 'string' ? data.file_path : undefined,
+              command: typeof data.command === 'string' ? data.command : undefined,
+              sessionName: typeof data.session_name === 'string' && data.session_name ? data.session_name : 'default',
             })
           }
           if (event === 'tool_result') {
             updateLastToolChip(chatId, {
               ok: typeof data.ok === 'boolean' ? data.ok : undefined,
+              resultData: typeof data.result === 'object' && data.result !== null ? data.result as Record<string, unknown> : undefined,
             })
           }
           if (event === 'token') {

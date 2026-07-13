@@ -5,14 +5,16 @@ from typing import Any
 
 from src.agents.tools.file_read import FILE_READ_TOOL_SCHEMA, execute_file_read
 from src.agents.tools.file_write import FILE_WRITE_TOOL_SCHEMA, execute_file_write
+from src.agents.tools.shall_tool import SHALL_TOOL_SCHEMA, execute_shall_tool
 
 
 class ToolRegistry:
     def __init__(self) -> None:
-        self._schemas = [FILE_WRITE_TOOL_SCHEMA, FILE_READ_TOOL_SCHEMA]
+        self._schemas = [FILE_WRITE_TOOL_SCHEMA, FILE_READ_TOOL_SCHEMA, SHALL_TOOL_SCHEMA]
         self._handlers = {
             "file_write": execute_file_write,
             "file_read": execute_file_read,
+            "shall_tool": execute_shall_tool,
         }
 
     @property

@@ -40,6 +40,9 @@ class SandboxAdapter(Protocol):
     async def ensure_ready(self, context: SandboxContext) -> None:
         ...
 
+    async def run_command(self, context: SandboxContext, command: str, timeout: int = 180, wait_for_output: bool = True) -> dict[str, Any]:
+        ...
+
     async def dispose(self, context: SandboxContext) -> None:
         ...
 

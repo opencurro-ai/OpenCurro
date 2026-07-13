@@ -15,6 +15,13 @@ File tool policy:
 - Use file_write to create or fully overwrite files.
 - If a file read fails because the path does not exist, reason from the structured tool error and continue.
 
+Command tool policy:
+- Use shall_tool to run any shell command in the sandbox (build, install, run scripts, etc.).
+- The sandbox session persists between commands; state (files, env) carries over.
+- When wait_for_output is True (default), the tool returns stdout, stderr, and exit_code.
+- For long-running processes, set wait_for_output to False to start them in the background.
+- Prefer running multiple independent commands in a single shell command joined with && when possible.
+
 Output policy:
 - Do not return fake tool calls as text.
 - Do not wrap tool calls in markdown or manual JSON.

@@ -5,6 +5,7 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from novita_sandbox.code_interpreter import AsyncSandbox
+from novita_sandbox.core.sandbox.commands.command_handle import CommandExitException
 
 from src.agents.sandbox.base import SandboxAdapter, SandboxContext, normalize_sandbox_path
 from src.schemas.sandbox import FileInfoModel, FileTreeNode, SandboxSettings
@@ -67,6 +68,31 @@ class NovitaSandboxAdapter(SandboxAdapter):
         safe_path = normalize_sandbox_path(path, context.root_path)
         info = await context.client.files.get_info(safe_path)
         return self._entry_to_info(info)
+
+    async def run_command(self, context: SandboxContext, command: str, timeout: int = 180, wait_for_output: bool = True) -> dict[str, Any]:
+        await self.ensure_ready(context)
+        try:
+            if wait_for_output:
+                result = await context.client.commands.run(cmd=command, timeout=timeout)
+                return {
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                    "exit_code": result.exit_code,
+                }
+            else:
+                handle = await context.client.commands.run(cmd=command, background=True, timeout=timeout)
+                return {
+                    "pid": handle.pid,
+                    "status": "started",
+                    "message": f"Command started with PID {handle.pid}",
+                }
+        except CommandExitException as exc:
+            return {
+                "stdout": exc.stdout,
+                "stderr": exc.stderr,
+                "exit_code": exc.exit_code,
+                "error": exc.error,
+            }
 
     async def dispose(self, context: SandboxContext) -> None:
         await context.client.kill()

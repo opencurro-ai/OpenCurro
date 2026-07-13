@@ -7,7 +7,10 @@ export interface ToolChip {
   name: string
   label: string
   filePath?: string
+  command?: string
+  sessionName?: string
   ok?: boolean
+  resultData?: Record<string, unknown>
 }
 
 export interface UiMessage {

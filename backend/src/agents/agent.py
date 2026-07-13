@@ -102,12 +102,16 @@ class AgentRunner:
                     tool_args = tool_call.get("function", {}).get("arguments", "{}")
                     tool_payload = self._safe_json_loads(tool_args)
                     file_path = tool_payload.get("file_path")
+                    command = tool_payload.get("command")
+                    session_name = tool_payload.get("session_name") or "default"
                     yield await send(
                         "tool_call",
                         {
                             "name": tool_name,
                             "file_path": file_path,
-                            "label": self._tool_label(tool_name, file_path),
+                            "command": command,
+                            "session_name": session_name,
+                            "label": self._tool_label(tool_name, file_path, command),
                         },
                     )
                     result = await self.tool_registry.execute(
@@ -203,7 +207,9 @@ class AgentRunner:
             except json.JSONDecodeError:
                 return {}
 
-    def _tool_label(self, tool_name: str, file_path: Optional[str]) -> str:
+    def _tool_label(self, tool_name: str, file_path: Optional[str], command: Optional[str] = None) -> str:
+        if tool_name == "shall_tool":
+            return f"Terminal: {command or 'unknown'}"
         prefix = "Create" if tool_name == "file_write" else "Read"
         return f"{prefix}: {file_path or 'unknown'}"
 
