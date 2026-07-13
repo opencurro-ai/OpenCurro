@@ -10,6 +10,12 @@ export default defineConfig({
     allowedHosts: true,
     host: true,
     cors: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
   },
   resolve: {
     alias: {

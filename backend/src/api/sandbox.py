@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 
 from src.agents.sandbox.registry import SandboxRegistry
-from src.schemas.sandbox import SandboxFilesResponse, SandboxSummary
+from src.schemas.sandbox import SandboxFilesResponse, SandboxSummary, WriteFileRequest
 from src.services.session_store import SessionStore
 
 
@@ -29,5 +29,28 @@ def build_sandbox_router(session_store: SessionStore, sandbox_registry: SandboxR
             template_id=session.sandbox_context.template_id,
         )
         return SandboxFilesResponse(sandbox=sandbox, path=path, tree=tree)
+
+    @router.get("/file-content")
+    async def read_sandbox_file(
+        chat_id: str = Query(...),
+        path: str = Query(...),
+    ) -> dict:
+        session = session_store.get(chat_id)
+        if session is None or session.sandbox_context is None:
+            raise HTTPException(status_code=404, detail="No active sandbox for this chat.")
+
+        adapter = sandbox_registry.get(session.sandbox_context.provider)
+        content = await adapter.read_file(session.sandbox_context, path)
+        return {"path": path, "content": content}
+
+    @router.post("/file-content")
+    async def write_sandbox_file(request: WriteFileRequest) -> dict:
+        session = session_store.get(request.chat_id)
+        if session is None or session.sandbox_context is None:
+            raise HTTPException(status_code=404, detail="No active sandbox for this chat.")
+
+        adapter = sandbox_registry.get(session.sandbox_context.provider)
+        await adapter.write_file(session.sandbox_context, request.path, request.content)
+        return {"path": request.path, "ok": True}
 
     return router

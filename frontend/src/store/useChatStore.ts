@@ -38,6 +38,7 @@ interface ChatState {
   finalizeAssistantMessage: (chatId: string, content: string) => void
   markAssistantError: (chatId: string, message: string) => void
   addToolChip: (chatId: string, tool: ToolChip) => void
+  updateLastToolChip: (chatId: string, updates: Partial<ToolChip>) => void
   setSandboxInfo: (chatId: string, sandbox: SandboxInfo) => void
   replaceModelHistory: (chatId: string, history: BackendMessage[]) => void
   addEvent: (chatId: string, event: Record<string, unknown>) => void
@@ -143,6 +144,22 @@ export const useChatStore = create<ChatState>()(
                 ? { ...message, toolChips: [...(message.toolChips ?? []), tool] }
                 : message),
               eventHistory: [...chat.eventHistory, { type: 'tool', tool }],
+            }
+          : chat),
+      })),
+      updateLastToolChip: (chatId, updates) => set((state) => ({
+        chats: state.chats.map((chat) => chat.id === chatId
+          ? {
+              ...chat,
+              messages: chat.messages.map((message, index) => {
+                if (index !== chat.messages.length - 1 || message.role !== 'assistant') return message
+                const toolChips = message.toolChips ?? []
+                if (toolChips.length === 0) return message
+                return {
+                  ...message,
+                  toolChips: toolChips.map((chip, i) => i === toolChips.length - 1 ? { ...chip, ...updates } : chip),
+                }
+              }),
             }
           : chat),
       })),

@@ -48,6 +48,12 @@ class SandboxFilesResponse(BaseModel):
     tree: list[FileTreeNode]
 
 
+class WriteFileRequest(BaseModel):
+    chat_id: str
+    path: str
+    content: str
+
+
 class ToolExecutionResult(BaseModel):
     ok: bool
     data: Optional[Any] = None

@@ -53,15 +53,33 @@ export async function ensureChatSession(chatId: string, history: BackendMessage[
 }
 
 export async function fetchSandboxFiles(chatId: string): Promise<SandboxFilesResponse> {
-  const url = new URL(`${env.backendUrl}/api/sandbox/files`)
-  url.searchParams.set('chat_id', chatId)
-  url.searchParams.set('path', '/home/user')
-  url.searchParams.set('depth', '6')
-  const response = await fetch(url.toString())
+  const params = new URLSearchParams({ chat_id: chatId, path: '/home/user', depth: '6' })
+  const response = await fetch(`${env.backendUrl}/api/sandbox/files?${params}`)
   if (!response.ok) {
     throw new Error('No active sandbox yet.')
   }
   return response.json()
+}
+
+export async function fetchSandboxFileContent(chatId: string, filePath: string): Promise<string> {
+  const params = new URLSearchParams({ chat_id: chatId, path: filePath })
+  const response = await fetch(`${env.backendUrl}/api/sandbox/file-content?${params}`)
+  if (!response.ok) {
+    throw new Error('Failed to load file content.')
+  }
+  const data = await response.json()
+  return data.content as string
+}
+
+export async function saveSandboxFileContent(chatId: string, filePath: string, content: string): Promise<void> {
+  const response = await fetch(`${env.backendUrl}/api/sandbox/file-content`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, path: filePath, content }),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to save file.')
+  }
 }
 
 export async function streamChat(payload: StreamChatPayload, onChunk: (event: string, data: Record<string, unknown>) => void): Promise<void> {

@@ -12,6 +12,7 @@ export function useAgentChat() {
     addUserMessage,
     addEvent,
     addToolChip,
+    updateLastToolChip,
     appendAssistantToken,
     finalizeAssistantMessage,
     markAssistantError,
@@ -100,11 +101,7 @@ export function useAgentChat() {
             })
           }
           if (event === 'tool_result') {
-            addToolChip(chatId, {
-              id: createId('tool-result'),
-              name: typeof data.name === 'string' ? data.name : 'tool',
-              label: `${typeof data.ok === 'boolean' && data.ok ? 'Done' : 'Issue'}: ${typeof data.file_path === 'string' ? data.file_path : 'unknown'}`,
-              filePath: typeof data.file_path === 'string' ? data.file_path : undefined,
+            updateLastToolChip(chatId, {
               ok: typeof data.ok === 'boolean' ? data.ok : undefined,
             })
           }
@@ -144,6 +141,7 @@ export function useAgentChat() {
     chats,
     finalizeAssistantMessage,
     markAssistantError,
+    updateLastToolChip,
     novitaApiKey,
     novitaTemplateId,
     providerBaseUrls,

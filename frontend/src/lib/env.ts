@@ -1,8 +1,4 @@
-const backendUrl = import.meta.env.VITE_BACKEND_URL
-
-if (!backendUrl) {
-  throw new Error('VITE_BACKEND_URL is missing. Set it in frontend/.env.')
-}
+const backendUrl = import.meta.env.VITE_BACKEND_URL || ''
 
 export const env = {
   backendUrl,
