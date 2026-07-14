@@ -1,22 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Menu, PanelLeftClose, Settings } from 'lucide-react'
 
 import { ChatWorkspace } from '@/components/chat/ChatWorkspace'
 import { HistorySidebar } from '@/components/chat/HistorySidebar'
 import { FileExplorer } from '@/components/files/FileExplorer'
 import { SettingsModal } from '@/components/settings/SettingsModal'
-import { Button } from '@/components/ui/button'
 import { useAgentChat } from '@/hooks/useAgentChat'
 import { useChatStore } from '@/store/useChatStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
 
 function App() {
   const { sendMessage } = useAgentChat()
-  const { activeChatId, chats, createChat, isStreaming, iterationCurrent, iterationLimit, setActiveChat, statusLabel } = useChatStore()
+  const { activeChatId, chats, createChat, isStreaming, iterationCurrent, iterationLimit, setActiveChat } = useChatStore()
   const { novitaApiKey, providerKeys, selectedModel, selectedProvider } = useSettingsStore()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [error, setError] = useState('')
+  const [mobileTab, setMobileTab] = useState<'chat' | 'files'>('chat')
 
   useEffect(() => {
     if (!chats.length) {
@@ -32,9 +31,7 @@ function App() {
   const activeChat = useMemo(() => chats.find((chat) => chat.id === (activeChatId || chats[0]?.id)) ?? chats[0], [activeChatId, chats])
   const readyToChat = Boolean(providerKeys[selectedProvider] && selectedModel && novitaApiKey)
 
-  if (!activeChat) {
-    return null
-  }
+  if (!activeChat) return null
 
   const handleSendMessage = async (value: string) => {
     try {
@@ -46,50 +43,75 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_30%),radial-gradient(circle_at_right,rgba(45,212,191,0.16),transparent_20%),linear-gradient(180deg,#02050a,#071019_52%,#03060b)] text-white">
-      <div className="mx-auto flex min-h-screen max-w-[1800px] flex-col gap-4 px-4 py-4 lg:px-6">
-        <header className="flex items-center justify-between rounded-[2rem] border border-white/10 bg-black/25 px-4 py-3 backdrop-blur-xl">
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" className="border-white/15 bg-white/5 text-white hover:bg-white/10" onClick={() => setSidebarOpen((value) => !value)}>
-              {sidebarOpen ? <PanelLeftClose className="size-4" /> : <Menu className="size-4" />}
-            </Button>
-            <div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.35em] text-cyan-200/70">Production workspace</p>
-              <h1 className="font-['Syne'] text-xl text-white">AI file agent for Novita sandbox</h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/60 md:block">
-              Provider <span className="text-cyan-100">{selectedProvider}</span> · Model <span className="text-cyan-100">{selectedModel || 'unselected'}</span>
-            </div>
-            <Button variant="outline" className="border-white/15 bg-white/5 text-white hover:bg-white/10" onClick={() => setSettingsOpen(true)}>
-              <Settings className="mr-2 size-4" />
-              Settings
-            </Button>
-          </div>
-        </header>
+    <div className="app h-dvh w-dvw flex flex-col overflow-hidden" style={{ background: 'radial-gradient(circle at top left, rgba(255, 199, 0, 0.16), transparent 22%), linear-gradient(180deg, #fbfbfa 0%, #f8f8f7 100%)' }}>
+      <div className="hidden md:grid md:grid-cols-[minmax(360px,40%)_1fr] flex-1 min-h-0">
+        <section className="flex flex-col h-full min-h-0 px-5">
+          <ChatWorkspace
+            chat={activeChat}
+            disabled={!readyToChat}
+            isStreaming={isStreaming}
+            iterationCurrent={iterationCurrent}
+            iterationLimit={iterationLimit}
+            onSendMessage={handleSendMessage}
+            onOpenSettings={() => setSettingsOpen(true)}
+            onToggleSidebar={() => setSidebarOpen((v) => !v)}
+            error={error}
+          />
+        </section>
+        <section className="flex flex-col h-full min-h-0 p-3 pr-5">
+          <FileExplorer chat={activeChat} />
+        </section>
+      </div>
 
-        {error ? <div className="rounded-[1.5rem] border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-sm text-rose-100">{error}</div> : null}
-
-        <main className="grid flex-1 min-h-0 gap-4 lg:grid-cols-[320px_minmax(0,1fr)_360px]">
-          <div className={`${sidebarOpen ? 'block' : 'hidden'} min-h-0 lg:block`}>
-            <HistorySidebar />
-          </div>
-          <div className="min-h-0">
+      <div className="flex md:hidden flex-1 min-h-0 flex-col">
+        <div className="flex-1 min-h-0 relative overflow-hidden">
+          <div className={`absolute inset-0 flex flex-col min-h-0 ${mobileTab === 'chat' ? 'flex' : 'hidden'}`}>
             <ChatWorkspace
               chat={activeChat}
               disabled={!readyToChat}
               isStreaming={isStreaming}
-              statusLabel={statusLabel}
               iterationCurrent={iterationCurrent}
               iterationLimit={iterationLimit}
               onSendMessage={handleSendMessage}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onToggleSidebar={() => setSidebarOpen((v) => !v)}
+              error={error}
             />
           </div>
-          <div className="min-h-0">
-            <FileExplorer chat={activeChat} />
+          <div className={`absolute inset-0 flex-col min-h-0 ${mobileTab === 'files' ? 'flex' : 'hidden'}`}>
+            <div className="flex-1 min-h-0 p-3 flex flex-col">
+              <FileExplorer chat={activeChat} />
+            </div>
           </div>
-        </main>
+        </div>
+        <nav className="h-[62px] border-t border-border bg-white/98 flex shadow-[0_-4px_16px_rgba(52,50,45,0.05)] shrink-0">
+          <button
+            className={`flex-1 flex flex-col items-center justify-center gap-[6px] text-[11px] transition-colors ${mobileTab === 'chat' ? 'text-[#9a6a00] bg-[rgba(255,199,0,0.12)]' : 'text-[#858481]'}`}
+            onClick={() => setMobileTab('chat')}
+          >
+            <svg viewBox="0 0 24 24" className="size-[18px]" strokeWidth={1.8}><path d="M7 10h10M7 14h7"/><path d="M21 12a8 8 0 0 1-8 8H5l-2 2V4a2 2 0 0 1 2-2h8a8 8 0 0 1 8 8Z"/></svg>
+            <span>Chat</span>
+          </button>
+          <button
+            className={`flex-1 flex flex-col items-center justify-center gap-[6px] text-[11px] transition-colors ${mobileTab === 'files' ? 'text-[#9a6a00] bg-[rgba(255,199,0,0.12)]' : 'text-[#858481]'}`}
+            onClick={() => setMobileTab('files')}
+          >
+            <svg viewBox="0 0 24 24" className="size-[18px]" strokeWidth={1.8}><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+            <span>Files</span>
+          </button>
+        </nav>
+      </div>
+
+      <div
+        className={`fixed inset-0 z-30 transition-[visibility,opacity] duration-150 ${sidebarOpen ? 'visible opacity-100' : 'invisible opacity-0'}`}
+      >
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-150" onClick={() => setSidebarOpen(false)} />
+        <div
+          className="absolute left-0 top-0 bottom-0 w-[320px] bg-white border-r border-border shadow-xl transition-transform duration-150 ease-out"
+          style={{ transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)' }}
+        >
+          <HistorySidebar onClose={() => setSidebarOpen(false)} />
+        </div>
       </div>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />

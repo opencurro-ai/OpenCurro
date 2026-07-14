@@ -1,13 +1,34 @@
 import { useEffect, useState } from 'react'
-import { FileX, Save, X } from 'lucide-react'
+import { X, Save } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
 import { fetchSandboxFileContent, saveSandboxFileContent } from '@/lib/api'
 
 interface FileViewerProps {
   chatId: string
   filePath: string
   onClose: () => void
+}
+
+function getFileExtensionClass(filename: string): string {
+  if (filename.endsWith('.ts') || filename.endsWith('.tsx')) return 'text-[#3b82f6]'
+  if (filename.endsWith('.py')) return 'text-[#10b981]'
+  if (filename.endsWith('.css')) return 'text-[#d946ef]'
+  if (filename.endsWith('.json')) return 'text-[#ca8a04]'
+  if (filename.endsWith('.js') || filename.endsWith('.jsx')) return 'text-[#eab308]'
+  if (filename.endsWith('.html')) return 'text-[#ef4444]'
+  return 'text-[#858481]'
+}
+
+function getLanguageLabel(filename: string): string {
+  if (filename.endsWith('.ts')) return 'TypeScript'
+  if (filename.endsWith('.tsx')) return 'TypeScript JSX'
+  if (filename.endsWith('.py')) return 'Python'
+  if (filename.endsWith('.css')) return 'CSS'
+  if (filename.endsWith('.json')) return 'JSON'
+  if (filename.endsWith('.js')) return 'JavaScript'
+  if (filename.endsWith('.jsx')) return 'JavaScript JSX'
+  if (filename.endsWith('.html')) return 'HTML'
+  return 'Plain Text'
 }
 
 export function FileViewer({ chatId, filePath, onClose }: FileViewerProps) {
@@ -19,6 +40,8 @@ export function FileViewer({ chatId, filePath, onClose }: FileViewerProps) {
   const [saved, setSaved] = useState(false)
 
   const isModified = content !== originalContent
+  const fileName = filePath.split('/').pop() || filePath
+  const lines = content.split('\n')
 
   useEffect(() => {
     setSaved(false)
@@ -49,62 +72,77 @@ export function FileViewer({ chatId, filePath, onClose }: FileViewerProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="mx-4 flex h-[80vh] w-full max-w-4xl flex-col rounded-[1.75rem] border border-white/10 bg-[#0a0f1a] shadow-[0_18px_60px_rgba(0,0,0,0.6)]" onClick={(e) => e.stopPropagation()}>
-        <header className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <div className="flex items-center gap-3 truncate">
-            <span className="rounded-full border border-white/10 bg-white/5 p-1.5">
-              <FileX className="size-4 text-cyan-200" />
-            </span>
-            <div className="truncate">
-              <p className="font-mono text-[11px] uppercase tracking-[0.35em] text-cyan-200/70">File viewer</p>
-              <h2 className="truncate font-['Syne'] text-lg text-white">{filePath}</h2>
-            </div>
+    <>
+      <div className="tab-strip h-10 flex items-center gap-2 px-[10px] border-b border-border bg-white overflow-auto shrink-0">
+        <div className="file-tab active inline-flex items-center gap-2 px-3 py-[10px] rounded-t-[12px] text-[13px] text-[#34322d] bg-[#f8f8f7] shadow-[inset_0_2px_0_#ffc700] whitespace-nowrap">
+          <svg viewBox="0 0 24 24" className={`size-[14px] ${getFileExtensionClass(fileName)}`}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+          {fileName}
+          <button onClick={onClose} className="ml-1 text-[#858481] hover:text-[#34322d]">
+            <X className="size-[14px]" />
+          </button>
+        </div>
+      </div>
+      <div className="crumbs h-[30px] flex items-center gap-2 px-[14px] border-b border-border bg-[rgba(255,255,255,0.76)] text-[#858481] text-[11px] shrink-0">
+        <span className="font-mono">{filePath.split('/').slice(0, -1).join(' › ')} › <strong className="text-[#34322d]">{fileName}</strong></span>
+        <div className="ml-auto flex items-center gap-2">
+          {saved ? (
+            <span className="text-[#22c55e] text-[11px]">Saved</span>
+          ) : null}
+          {isModified ? (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="inline-flex items-center gap-1 text-[#3b82f6] hover:text-[#2563eb] text-[11px] font-medium"
+            >
+              <Save className="size-[14px]" />
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          ) : null}
+          <button onClick={onClose} className="text-[#858481] hover:text-[#34322d]" title="Close file">
+            <X className="size-[14px]" />
+          </button>
+        </div>
+      </div>
+      <div className="editor-shell flex-1 min-h-0 flex flex-col">
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center text-[#858481] text-sm bg-[#f5f5f5]">
+            Loading file content...
           </div>
-          <div className="flex items-center gap-2">
-            {saved ? (
-              <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">
-                Saved
-              </span>
-            ) : null}
-            {isModified ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-cyan-300/30 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/20"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                <Save className="mr-1.5 size-4" />
-                {saving ? 'Saving...' : 'Save'}
-              </Button>
-            ) : null}
-            <Button variant="outline" size="icon" className="border-white/15 bg-white/5 text-white hover:bg-white/10" onClick={onClose}>
-              <X className="size-4" />
-            </Button>
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-hidden p-5">
-          {loading ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="flex items-center gap-3 text-sm text-white/50">
-                <div className="size-5 animate-spin rounded-full border-2 border-cyan-300/30 border-t-cyan-300" />
-                Loading file content...
-              </div>
+        ) : error ? (
+          <div className="flex-1 flex items-center justify-center text-[#ef4444] text-sm bg-[#f5f5f5] p-4">{error}</div>
+        ) : (
+          <div className="flex-1 min-h-0 bg-[#f5f5f5] overflow-auto relative">
+            <div className="code-preview font-mono text-[13px] leading-[1.8] text-[#374151] min-w-[640px]">
+              {lines.map((line, i) => (
+                <div key={i} className="code-line grid grid-cols-[52px_1fr] gap-0 whitespace-pre hover:bg-[rgba(59,130,246,0.05)]">
+                  <span className="line-num text-[#9ca3af] text-right pr-4 select-none">{i + 1}</span>
+                  <span>{line || ' '}</span>
+                </div>
+              ))}
             </div>
-          ) : error ? (
-            <div className="rounded-2xl border border-rose-300/20 bg-rose-300/10 p-4 text-sm text-rose-100">{error}</div>
-          ) : (
             <textarea
-              className="h-full w-full resize-none rounded-2xl border border-white/10 bg-black/50 p-4 font-mono text-sm leading-6 text-white/86 outline-none focus:border-cyan-300/30 focus:ring-1 focus:ring-cyan-300/20"
+              className="absolute inset-0 w-full h-full resize-none bg-transparent font-mono text-[13px] leading-[1.8] text-transparent caret-[#34322d] p-0 outline-none overflow-hidden"
+              style={{
+                WebkitTextFillColor: 'transparent',
+                gridTemplateColumns: '52px 1fr',
+              }}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               spellCheck={false}
             />
-          )}
+          </div>
+        )}
+      </div>
+      <div className="editor-footer h-[26px] flex items-center justify-between px-3 border-t border-border bg-white text-[#858481] text-[10px] shrink-0">
+        <div className="flex gap-[14px]">
+          <span>Ln 1, Col 1</span>
+          <span>Spaces: 2</span>
+        </div>
+        <div className="flex gap-[14px]">
+          <span>{getLanguageLabel(fileName)}</span>
+          <span>UTF-8</span>
         </div>
       </div>
-    </div>
+    </>
   )
 }

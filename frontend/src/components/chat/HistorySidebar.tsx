@@ -1,49 +1,68 @@
-import { MessageSquarePlus, Trash2 } from 'lucide-react'
+import { MessageSquarePlus, Trash2, X } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
 import { useChatStore } from '@/store/useChatStore'
 
-export function HistorySidebar() {
+interface HistorySidebarProps {
+  onClose: () => void
+}
+
+export function HistorySidebar({ onClose }: HistorySidebarProps) {
   const { activeChatId, chats, createChat, deleteChat, setActiveChat } = useChatStore()
   const currentChatId = activeChatId || chats[0]?.id
 
   return (
-    <aside className="flex h-full w-full flex-col rounded-[2rem] border border-white/10 bg-black/30 backdrop-blur-xl">
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.35em] text-cyan-200/70">Chat history</p>
-          <h2 className="font-['Syne'] text-lg text-white">Sessions</h2>
+    <aside className="flex h-full flex-col">
+      <div className="flex items-center justify-between px-4 py-4 border-b border-border">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-[10px] bg-[#ffc700] grid place-items-center text-[#34322d] font-extrabold text-sm shadow-[0_10px_20px_rgba(255,199,0,0.26)]">
+            A
+          </div>
+          <h2 className="font-bold text-[15px] text-[#34322d]">Chat History</h2>
         </div>
-        <Button variant="outline" size="icon" className="border-white/15 bg-white/5 text-white hover:bg-white/10" onClick={() => createChat()}>
-          <MessageSquarePlus className="size-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => createChat()}
+            className="w-[34px] h-[34px] rounded-[10px] grid place-items-center text-[#858481] hover:bg-[rgba(55,53,47,0.04)] hover:text-[#34322d] transition-colors"
+            aria-label="New chat"
+          >
+            <MessageSquarePlus className="size-[18px]" />
+          </button>
+          <button
+            onClick={onClose}
+            className="w-[34px] h-[34px] rounded-[10px] grid place-items-center text-[#858481] hover:bg-[rgba(55,53,47,0.04)] hover:text-[#34322d] transition-colors"
+            aria-label="Close sidebar"
+          >
+            <X className="size-[18px]" />
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {chats.map((chat) => {
           const isActive = chat.id === currentChatId
           return (
             <div
               key={chat.id}
-              className={`group flex items-start gap-2 rounded-2xl border px-3 py-3 transition ${isActive ? 'border-cyan-300/50 bg-cyan-300/10 text-white shadow-[0_0_40px_rgba(103,232,249,0.08)]' : 'border-white/8 bg-white/4 text-white/70 hover:border-white/15 hover:bg-white/8'}`}
+              className={`group flex items-start gap-2 rounded-[14px] border px-3 py-3 transition cursor-pointer ${
+                isActive
+                  ? 'border-[rgba(255,199,0,0.4)] bg-[rgba(255,199,0,0.1)] text-[#34322d]'
+                  : 'border-[#eee] bg-white text-[#858481] hover:border-[#ddd] hover:bg-[rgba(55,53,47,0.02)]'
+              }`}
+              onClick={() => { setActiveChat(chat.id); onClose() }}
             >
-              <button
-                type="button"
-                onClick={() => setActiveChat(chat.id)}
-                className="min-w-0 flex-1 text-left"
-              >
-                <div className="truncate font-medium">{chat.title || 'New chat'}</div>
-                <div className="mt-1 truncate text-xs text-white/45">
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium text-[13px]">{chat.title || 'New chat'}</div>
+                <div className="mt-1 truncate text-xs text-[#858481]">
                   {chat.messages[chat.messages.length - 1]?.content || 'No messages yet'}
                 </div>
-              </button>
+              </div>
               <button
                 type="button"
-                className="rounded-full p-2 text-white/35 opacity-0 transition group-hover:opacity-100 hover:bg-white/8 hover:text-rose-200"
-                onClick={() => deleteChat(chat.id)}
+                className="rounded-full p-1.5 text-[#858481] opacity-0 group-hover:opacity-100 hover:bg-[rgba(55,53,47,0.06)] hover:text-[#ef4444] transition"
+                onClick={(e) => { e.stopPropagation(); deleteChat(chat.id) }}
                 aria-label={`Delete ${chat.title}`}
               >
-                <Trash2 className="size-4" />
+                <Trash2 className="size-[14px]" />
               </button>
             </div>
           )

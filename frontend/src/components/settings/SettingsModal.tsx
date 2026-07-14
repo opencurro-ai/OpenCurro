@@ -1,6 +1,5 @@
-import { Loader2, Settings2 } from 'lucide-react'
+import { Loader2, Settings, TriangleAlert } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
 import { useProviders } from '@/hooks/useProviders'
 import { useSettingsStore } from '@/store/useSettingsStore'
 import type { ProviderId } from '@/types/chat'
@@ -30,121 +29,142 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   } = useSettingsStore()
   const { error, loadingModels, loadModels } = useProviders()
 
-  if (!open) {
-    return null
-  }
+  if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] border border-white/10 bg-[#090d14] p-6 shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.35em] text-cyan-200/70">Control plane</p>
-            <h2 className="font-['Syne'] text-3xl text-white">Settings</h2>
+    <div className="fixed inset-0 z-50" onClick={onClose}>
+      <div
+        className="absolute inset-0 bg-[rgba(17,17,17,0.55)] backdrop-blur-[8px]"
+        onClick={onClose}
+      />
+      <div
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(560px,calc(100dvw-24px))] max-h-[calc(100dvh-32px)] overflow-auto bg-white border border-border rounded-[22px] shadow-[0_32px_80px_rgba(17,17,17,0.25)] p-[22px] z-[1] animate-[fadeUp_0.25s_ease]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-head flex items-center gap-[14px] mb-[22px]">
+          <div className="modal-icon w-[42px] h-[42px] rounded-[14px] bg-[rgba(255,199,0,0.15)] grid place-items-center text-[#a16a00] shrink-0">
+            <Settings className="size-5" />
           </div>
-          <Button variant="outline" className="border-white/15 bg-white/5 text-white hover:bg-white/10" onClick={onClose}>
-            Close
-          </Button>
+          <div>
+            <div className="modal-title text-xl font-bold text-[#34322d]">Settings</div>
+            <div className="modal-subtitle text-xs text-[#858481] mt-[2px]">Configure credentials and models</div>
+          </div>
         </div>
 
-        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-5">
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/4 p-4">
-              <div className="mb-3 flex items-center gap-2 text-white">
-                <Settings2 className="size-4 text-cyan-200" />
-                <h3 className="font-medium">LLM providers</h3>
-              </div>
-              <div className="space-y-4">
-                {providers.map((provider) => (
-                  <div key={provider} className="space-y-2 rounded-[1.25rem] border border-white/8 bg-black/20 p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <label className="text-sm font-medium capitalize text-white">{provider}</label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="border-white/15 bg-white/5 text-white hover:bg-white/10"
-                        onClick={() => void loadModels(provider)}
-                      >
-                        {loadingModels && provider === selectedProvider ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-                        Fetch models
-                      </Button>
+        <div className="field-group mb-[18px]">
+          <label className="field-label flex items-center gap-2 text-sm font-semibold text-[#34322d] mb-[10px]">
+            <svg viewBox="0 0 24 24" className="size-[18px]" strokeWidth={1.8}><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            API Configuration
+          </label>
+          <div className="space-y-4">
+            {providers.map((provider) => (
+              <div key={provider} className="provider-card rounded-[18px] bg-[#f5f5f5] border border-border p-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="ico w-[34px] h-[34px] rounded-[12px] bg-[rgba(59,130,246,0.12)] grid place-items-center text-[#3b82f6] shrink-0">
+                      <svg viewBox="0 0 24 24" className="size-[18px]" strokeWidth={1.8}><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                     </div>
-                    <input
-                      value={providerKeys[provider]}
-                      onChange={(event) => setProviderKey(provider, event.target.value)}
-                      placeholder={`${provider.toUpperCase()} API key`}
-                      className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/50"
-                    />
-                    <input
-                      value={providerBaseUrls[provider]}
-                      onChange={(event) => setProviderBaseUrl(provider, event.target.value)}
-                      placeholder="Base URL"
-                      className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/50"
-                    />
+                    <div>
+                      <div className="provider-name text-sm font-semibold text-[#34322d] capitalize">{provider}</div>
+                      <div className="provider-desc text-[11px] text-[#858481]">
+                        {provider === 'openrouter' ? 'Access any foundation model' : provider === 'groq' ? 'Fast inference API' : 'NVIDIA AI models'}
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/4 p-4">
-              <h3 className="mb-3 text-sm font-medium text-white">Novita sandbox</h3>
-              <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => void loadModels(provider)}
+                    className="px-3 py-2 rounded-[12px] text-xs font-semibold text-[#858481] hover:bg-[rgba(55,53,47,0.04)] hover:text-[#34322d] transition-colors border border-border"
+                  >
+                    {loadingModels && provider === selectedProvider ? <Loader2 className="size-3 animate-spin inline mr-1" /> : null}
+                    Fetch models
+                  </button>
+                </div>
                 <input
-                  value={novitaApiKey}
-                  onChange={(event) => setNovitaApiKey(event.target.value)}
-                  placeholder="Novita API key"
-                  className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/50"
+                  value={providerKeys[provider]}
+                  onChange={(event) => setProviderKey(provider, event.target.value)}
+                  placeholder={`${provider.toUpperCase()} API key`}
+                  className="w-full rounded-[14px] border border-border bg-white px-4 py-3 text-sm text-[#34322d] outline-none placeholder:text-[#858481] focus:border-[#ffc700]"
                 />
                 <input
-                  value={novitaTemplateId}
-                  onChange={(event) => setNovitaTemplateId(event.target.value)}
-                  placeholder="Optional custom sandbox template id"
-                  className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/50"
+                  value={providerBaseUrls[provider]}
+                  onChange={(event) => setProviderBaseUrl(provider, event.target.value)}
+                  placeholder="Base URL"
+                  className="w-full rounded-[14px] border border-border bg-white px-4 py-3 text-sm text-[#34322d] outline-none placeholder:text-[#858481] focus:border-[#ffc700] mt-2"
                 />
-                <p className="text-xs leading-6 text-white/50">Sandbox creation is automatic on the first message. Timeout is set to one hour with resume-friendly lifecycle handling.</p>
               </div>
-            </div>
+            ))}
           </div>
+        </div>
 
-          <div className="space-y-5">
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/4 p-4">
-              <label className="mb-2 block text-sm font-medium text-white">Active provider</label>
-              <select
-                value={selectedProvider}
-                onChange={(event) => setSelectedProvider(event.target.value as ProviderId)}
-                className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none"
-              >
-                {providers.map((provider) => (
-                  <option key={provider} value={provider} className="bg-slate-900">
-                    {provider}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/4 p-4">
-              <label className="mb-2 block text-sm font-medium text-white">Model</label>
-              <select
-                value={selectedModel}
-                onChange={(event) => setSelectedModel(event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none"
-              >
-                <option value="" className="bg-slate-900">Select model</option>
-                {modelsByProvider[selectedProvider].map((model) => (
-                  <option key={model.id} value={model.id} className="bg-slate-900">
-                    {model.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="rounded-[1.5rem] border border-cyan-300/15 bg-cyan-300/8 p-4 text-sm leading-7 text-cyan-50/85">
-              <p>Use native tool calling only. Models are fetched live from the selected provider after you add its key.</p>
-            </div>
-
-            {error ? <div className="rounded-[1.5rem] border border-rose-300/20 bg-rose-300/10 p-4 text-sm text-rose-100">{error}</div> : null}
+        <div className="field-group mb-[18px]">
+          <label className="field-label flex items-center gap-2 text-sm font-semibold text-[#34322d] mb-[10px]">
+            Novita Sandbox
+          </label>
+          <div className="space-y-3">
+            <input
+              value={novitaApiKey}
+              onChange={(event) => setNovitaApiKey(event.target.value)}
+              placeholder="Novita API key"
+              className="w-full rounded-[14px] border border-border bg-white px-4 py-3 text-sm text-[#34322d] outline-none placeholder:text-[#858481] focus:border-[#ffc700]"
+            />
+            <input
+              value={novitaTemplateId}
+              onChange={(event) => setNovitaTemplateId(event.target.value)}
+              placeholder="Optional custom sandbox template id"
+              className="w-full rounded-[14px] border border-border bg-white px-4 py-3 text-sm text-[#34322d] outline-none placeholder:text-[#858481] focus:border-[#ffc700]"
+            />
+            <p className="text-xs leading-relaxed text-[#858481]">
+              Sandbox creation is automatic on the first message. Timeout is set to one hour with resume-friendly lifecycle handling.
+            </p>
           </div>
-        </section>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2 mb-[18px]">
+          <div className="rounded-[18px] bg-[#f5f5f5] border border-border p-4">
+            <label className="block text-sm font-semibold text-[#34322d] mb-2">Active provider</label>
+            <select
+              value={selectedProvider}
+              onChange={(event) => setSelectedProvider(event.target.value as ProviderId)}
+              className="w-full rounded-[14px] border border-border bg-white px-4 py-3 text-sm text-[#34322d] outline-none"
+            >
+              {providers.map((provider) => (
+                <option key={provider} value={provider}>{provider}</option>
+              ))}
+            </select>
+          </div>
+          <div className="rounded-[18px] bg-[#f5f5f5] border border-border p-4">
+            <label className="block text-sm font-semibold text-[#34322d] mb-2">Model</label>
+            <select
+              value={selectedModel}
+              onChange={(event) => setSelectedModel(event.target.value)}
+              className="w-full rounded-[14px] border border-border bg-white px-4 py-3 text-sm text-[#34322d] outline-none"
+            >
+              <option value="">Select model</option>
+              {modelsByProvider[selectedProvider].map((model) => (
+                <option key={model.id} value={model.id}>{model.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="warn-inline flex items-start gap-[10px] px-[14px] py-3 rounded-[14px] bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.22)] text-[#b45309] text-xs">
+          <TriangleAlert className="size-[18px] shrink-0 mt-[-1px]" />
+          OpenRouter API key is required to use the agent.
+        </div>
+
+        {error ? (
+          <div className="rounded-[14px] border border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.08)] p-3 text-sm text-[#ef4444] mt-3">{error}</div>
+        ) : null}
+
+        <div className="modal-actions flex justify-end gap-3 pt-[18px] border-t border-border mt-[22px]">
+          <button onClick={onClose} className="btn ghost px-[14px] py-[11px] rounded-[12px] font-semibold text-sm text-[#858481] hover:bg-[rgba(55,53,47,0.04)] hover:text-[#34322d] transition-colors">
+            Cancel
+          </button>
+          <button onClick={onClose} className="btn primary px-[14px] py-[11px] rounded-[12px] font-semibold text-sm bg-[#ffc700] text-[#34322d] shadow-[0_12px_26px_rgba(255,199,0,0.24)] hover:brightness-[1.03] transition-colors">
+            Save Changes
+          </button>
+        </div>
       </div>
     </div>
   )

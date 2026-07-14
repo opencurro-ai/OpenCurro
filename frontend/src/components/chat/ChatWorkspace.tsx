@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Bot, ChevronDown, ChevronRight, Sparkles, Terminal, User2 } from 'lucide-react'
+import { Menu, Settings, Terminal } from 'lucide-react'
 
 import { Composer } from '@/components/chat/Composer'
 import type { ChatRecord, ToolChip } from '@/types/chat'
@@ -8,10 +8,12 @@ interface ChatWorkspaceProps {
   chat: ChatRecord
   disabled: boolean
   isStreaming: boolean
-  statusLabel: string
   iterationCurrent: number
   iterationLimit: number
   onSendMessage: (value: string) => Promise<void>
+  onOpenSettings: () => void
+  onToggleSidebar: () => void
+  error?: string
 }
 
 function TerminalOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: boolean; onToggle: () => void }) {
@@ -32,57 +34,46 @@ function TerminalOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: bo
     : 'done'
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-black/60">
+    <div className="overflow-hidden rounded-[18px] border border-border bg-white shadow-sm">
       <button
         onClick={onToggle}
-        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-white/5 ${
-          chip.ok === false ? 'text-rose-200' : 'text-cyan-200'
-        }`}
+        className={`flex w-full items-center gap-2 px-4 py-3 text-left text-xs transition-colors hover:bg-[rgba(55,53,47,0.04)] ${chip.ok === false ? 'text-[#ef4444]' : 'text-[#34322d]'}`}
       >
-        {isOpen ? <ChevronDown className="size-3 shrink-0" /> : <ChevronRight className="size-3 shrink-0" />}
-        <Terminal className="size-3 shrink-0" />
-        <span className="flex-1 truncate font-mono">
+        <Terminal className="size-[14px] shrink-0 text-[#858481]" />
+        <span className="flex-1 truncate font-mono text-[13px]">
           {chip.label}
-          {chip.sessionName ? <span className="ml-2 text-[10px] text-white/40">[{chip.sessionName}]</span> : null}
+          {chip.sessionName ? <span className="ml-2 text-[11px] text-[#858481]">[{chip.sessionName}]</span> : null}
         </span>
-        <span className={`shrink-0 text-[10px] ${isRunning ? 'animate-pulse text-white/40' : status === 'started' ? 'text-amber-400' : exitCode === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+        <span className={`shrink-0 text-[11px] ${isRunning ? 'animate-pulse text-[#858481]' : status === 'started' ? 'text-[#f97316]' : exitCode === 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
           {statusLabel}
         </span>
       </button>
       {isOpen && (
-        <div className="border-t border-white/10 p-3 font-mono text-[13px] leading-relaxed">
-          <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-wider text-white/40">
+        <div className="border-t border-border p-4 font-mono text-[13px] leading-relaxed bg-[#f5f5f5]">
+          <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-wider text-[#858481]">
             <Terminal className="size-3" />
             <span>$ {chip.command || 'command'}</span>
-            {chip.sessionName ? <span className="ml-auto text-white/30">session: {chip.sessionName}</span> : null}
+            {chip.sessionName ? <span className="ml-auto text-[#858481]/60">session: {chip.sessionName}</span> : null}
           </div>
           {chip.ok !== undefined ? (
             <div className="space-y-1">
-              {stdout ? (
-                <pre className="whitespace-pre-wrap text-emerald-200/90">{stdout}</pre>
-              ) : null}
-              {stderr ? (
-                <pre className="whitespace-pre-wrap text-rose-300/80">{stderr}</pre>
-              ) : null}
-              {message ? (
-                <div className="text-white/70">{message}</div>
-              ) : null}
-              {pid !== undefined ? (
-                <div className="text-[11px] text-white/50">PID: {pid}</div>
-              ) : null}
+              {stdout ? <pre className="whitespace-pre-wrap text-[#059669]">{stdout}</pre> : null}
+              {stderr ? <pre className="whitespace-pre-wrap text-[#dc2626]/80">{stderr}</pre> : null}
+              {message ? <div className="text-[#34322d]/70">{message}</div> : null}
+              {pid !== undefined ? <div className="text-[11px] text-[#858481]">PID: {pid}</div> : null}
               {exitCode !== undefined ? (
-                <div className={`pt-1 text-[11px] ${exitCode === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                <div className={`pt-1 text-[11px] ${exitCode === 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
                   Exit code: {exitCode}
                 </div>
               ) : null}
             </div>
           ) : isRunning ? (
-            <div className="flex items-center gap-2 text-white/40">
-              <span className="inline-block size-2 animate-pulse rounded-full bg-cyan-300" />
+            <div className="flex items-center gap-2 text-[#858481]">
+              <span className="inline-block size-2 animate-pulse rounded-full bg-[#ffc700]" />
               Running...
             </div>
           ) : (
-            <div className="text-white/40">No output</div>
+            <div className="text-[#858481]">No output</div>
           )}
         </div>
       )}
@@ -90,108 +81,137 @@ function TerminalOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: bo
   )
 }
 
-function ShimmerLabel({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-medium text-cyan-100">
-      <span className="mr-2 size-2 rounded-full bg-cyan-300 shadow-[0_0_16px_rgba(103,232,249,0.8)]" />
-      <span className="bg-[linear-gradient(110deg,rgba(255,255,255,0.4),rgba(255,255,255,1),rgba(255,255,255,0.4))] bg-[length:220%_100%] bg-clip-text text-transparent animate-[shine_2.4s_linear_infinite]">
-        {label}
-      </span>
-    </span>
-  )
-}
-
 export function ChatWorkspace({
   chat,
   disabled,
   isStreaming,
-  statusLabel,
   iterationCurrent,
   iterationLimit,
   onSendMessage,
+  onOpenSettings,
+  onToggleSidebar,
+  error,
 }: ChatWorkspaceProps) {
   const [openTerminals, setOpenTerminals] = useState<Set<string>>(new Set())
 
   const toggleTerminal = (chipId: string) => {
     setOpenTerminals((prev) => {
       const next = new Set(prev)
-      if (next.has(chipId)) {
-        next.delete(chipId)
-      } else {
-        next.add(chipId)
-      }
+      if (next.has(chipId)) next.delete(chipId)
+      else next.add(chipId)
       return next
     })
   }
 
+  const readyToChat = !disabled
+
   return (
-    <section className="flex h-full min-h-0 flex-col rounded-[2rem] border border-white/10 bg-black/35 backdrop-blur-xl">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.35em] text-cyan-200/70">Agent console</p>
-          <h1 className="font-['Syne'] text-2xl text-white">Novita Agent Studio</h1>
+    <div className="flex flex-col h-full min-h-0 w-full">
+      <header className="flex items-center justify-between py-4 border-b border-border gap-4 shrink-0">
+        <div className="flex items-center gap-[14px] min-w-0">
+          <button
+            onClick={onToggleSidebar}
+            className="w-[44px] h-[44px] rounded-[10px] grid place-items-center text-[#858481] hover:bg-[rgba(55,53,47,0.04)] hover:text-[#34322d] transition-colors shrink-0"
+            aria-label="Toggle sidebar"
+          >
+            <Menu className="size-[20px]" />
+          </button>
+          <div className="w-8 h-8 rounded-[10px] bg-[#ffc700] grid place-items-center text-[#34322d] font-extrabold shadow-[0_10px_20px_rgba(255,199,0,0.26)] shrink-0 text-sm">
+            A
+          </div>
+          <div className="text-[15px] font-bold truncate">{chat.title || 'New chat'}</div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-white/70">
-          <ShimmerLabel label={isStreaming ? statusLabel : 'Ready'} />
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-cyan-100">
-            Iteration {iterationCurrent}/{iterationLimit}
-          </span>
+        <div className="flex gap-[2px] shrink-0">
+          <button
+            className={`w-[34px] h-[34px] rounded-[10px] grid place-items-center transition-colors shrink-0 ${!readyToChat ? 'text-[#f97316] animate-[pulse_1.6s_infinite_ease-in-out]' : 'text-[#858481]'} hover:bg-[rgba(55,53,47,0.04)] hover:text-[#34322d]`}
+            onClick={onOpenSettings}
+            aria-label="Open settings"
+          >
+            <Settings className="size-[18px]" />
+          </button>
         </div>
       </header>
 
-      <div className="flex-1 space-y-6 overflow-y-auto px-5 py-6">
-        {chat.messages.length === 0 ? (
-          <div className="flex h-full min-h-[320px] flex-col items-center justify-center rounded-[2rem] border border-dashed border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_40%)] p-10 text-center">
-            <Sparkles className="mb-4 size-10 text-cyan-200" />
-            <h2 className="font-['Syne'] text-3xl text-white">Autonomous file agent</h2>
-            <p className="mt-3 max-w-xl text-sm leading-7 text-white/60">
-              Add your provider and Novita keys in Settings, choose a model, then ask the agent to inspect, create, or overwrite files inside the sandbox.
-            </p>
-          </div>
-        ) : null}
-
-        {chat.messages.map((message) => (
-          <article key={message.id} className={`space-y-3 ${message.role === 'user' ? 'ml-auto max-w-3xl' : 'mr-auto max-w-4xl'}`}>
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/35">
-              {message.role === 'user' ? <User2 className="size-4" /> : <Bot className="size-4" />}
-              <span>{message.role === 'user' ? 'User' : 'Agent'}</span>
-            </div>
-            {message.role === 'user' ? (
-              <div className="rounded-[1.75rem] border border-white/8 bg-white/8 px-5 py-4 text-sm leading-7 text-white shadow-[0_18px_60px_rgba(15,23,42,0.35)]">
-                {message.content}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="whitespace-pre-wrap text-[15px] leading-8 text-white/86">{message.content || (message.status === 'streaming' ? '...' : '')}</div>
-                {message.toolChips && message.toolChips.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {message.toolChips.map((tool) =>
-                      tool.name === 'shall_tool' ? (
-                        <div key={tool.id} className="w-full max-w-2xl">
-                          <TerminalOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
-                        </div>
-                      ) : (
-                        <span key={tool.id} className={`rounded-full border px-3 py-1 text-xs ${tool.ok === false ? 'border-rose-300/30 bg-rose-300/10 text-rose-100' : 'border-cyan-300/20 bg-cyan-300/10 text-cyan-100'}`}>
-                          {tool.label}
-                        </span>
-                      )
-                    )}
+      <div className="messages flex-1 min-h-0 overflow-auto py-5 px-0">
+        <div className="flex flex-col gap-6 max-w-[760px] mx-auto">
+          {chat.messages.map((message) => (
+            <article key={message.id}>
+              {message.role === 'user' ? (
+                <div className="flex gap-3 items-start">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#5b67f5] to-[#8f42ff] grid place-items-center text-xs font-bold shrink-0 shadow-[0_10px_20px_rgba(104,90,255,0.25)]">
+                    <span className="text-white">U</span>
                   </div>
-                ) : null}
-              </div>
-            )}
-          </article>
-        ))}
+                  <div className="user-bubble flex-1 bg-white border border-border rounded-[22px] px-4 py-[15px] text-sm leading-[1.65] shadow-sm text-[#34322d]">
+                    {message.content}
+                  </div>
+                </div>
+              ) : (
+                <div className="assistant-block">
+                  <div className="assistant-head flex items-center gap-2 mb-3">
+                    <div className="assistant-name text-lg font-extrabold">
+                      <span className="text-[#a855f7]">Curro</span> <span className="text-[#34322d]">AI</span>
+                    </div>
+                  </div>
+                  <div className="assistant-copy text-[15px] leading-relaxed text-[#34322d]">
+                    {message.content || (message.status === 'streaming' ? (
+                      <div className="thinking flex items-center gap-[10px] pt-[6px]">
+                        <div className="thinking-line flex items-baseline gap-[6px] font-bold text-[#858481]">
+                          <span style={{ color: '#a855f7' }}>Curro</span> thinking
+                          <span className="thinking-dots inline-block">
+                            <span className="animate-[blinkWave_1.8s_infinite_ease-in-out]" style={{ opacity: 0.25, display: 'inline-block' }}>.</span>
+                            <span className="animate-[blinkWave_1.8s_infinite_ease-in-out]" style={{ opacity: 0.25, display: 'inline-block', animationDelay: '0.12s' }}>.</span>
+                            <span className="animate-[blinkWave_1.8s_infinite_ease-in-out]" style={{ opacity: 0.25, display: 'inline-block', animationDelay: '0.24s' }}>.</span>
+                            <span className="animate-[blinkWave_1.8s_infinite_ease-in-out]" style={{ opacity: 0.25, display: 'inline-block', animationDelay: '0.36s' }}>.</span>
+                          </span>
+                        </div>
+                      </div>
+                    ) : '')}
+                  </div>
+                  {message.toolChips && message.toolChips.length > 0 ? (
+                    <div className="flex flex-wrap gap-[10px] mt-3">
+                      {message.toolChips.map((tool) =>
+                        tool.name === 'shall_tool' ? (
+                          <div key={tool.id} className="w-full max-w-xl">
+                            <TerminalOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
+                          </div>
+                        ) : (
+                          <span key={tool.id} className={`inline-flex items-center gap-2 px-3 py-[6px] rounded-full bg-white border border-border text-xs text-[#34322d] shadow-sm ${tool.ok === false ? 'border-red-300 bg-red-50 text-red-600' : ''}`}>
+                            <span className="text-[#858481] flex items-center">
+                              <svg viewBox="0 0 24 24" className="size-[14px]" strokeWidth={1.8}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            </span>
+                            <span>{tool.label}</span>
+                            {tool.filePath ? <small className="text-[#858481] font-mono">{tool.filePath}</small> : null}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
       </div>
 
-      <div className="border-t border-white/10 p-4">
+      {error ? (
+        <div className="flex items-center gap-[10px] mb-3 px-[14px] py-3 rounded-[16px] border border-[rgba(239,68,68,0.25)] text-[#ef4444] bg-[rgba(239,68,68,0.08)] shadow-sm text-[13px] shrink-0">
+          <svg viewBox="0 0 24 24" className="size-[18px] shrink-0" strokeWidth={1.8}><path d="M12 9v4M12 17h.01"/><path d="M10.3 4.3 2.6 18A2 2 0 0 0 4.3 21h15.4a2 2 0 0 0 1.7-3l-7.7-13.7a2 2 0 0 0-3.4 0Z"/></svg>
+          {error}
+        </div>
+      ) : null}
+
+      <footer className="pt-[14px] pb-[18px] shrink-0">
         <Composer
           disabled={disabled}
           isStreaming={isStreaming}
-          placeholder={disabled ? 'Add keys and select a model in Settings to begin.' : 'Ask the agent to read, create, or overwrite files in the Novita sandbox...'}
+          iterationCurrent={iterationCurrent}
+          iterationLimit={iterationLimit}
+          readyToChat={readyToChat}
+          placeholder={disabled ? 'Configure API keys in Settings to start chatting.' : 'Ask Curro to help you build something...'}
           onSubmit={onSendMessage}
+          onOpenSettings={onOpenSettings}
         />
-      </div>
-    </section>
+      </footer>
+    </div>
   )
 }
