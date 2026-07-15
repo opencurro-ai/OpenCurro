@@ -30,7 +30,7 @@ SHALL_TOOL_SCHEMA = {
 }
 
 
-async def execute_shall_tool(*, sandbox_adapter, sandbox_context, arguments: dict) -> ToolExecutionResult:
+async def execute_shall_tool(*, sandbox_adapter, sandbox_context, arguments: dict, **kwargs) -> ToolExecutionResult:
     session_name = arguments.get("session_name", "default")
     command = arguments.get("command")
     wait_for_output = arguments.get("wait_for_output", True)

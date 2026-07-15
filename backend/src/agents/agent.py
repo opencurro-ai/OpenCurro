@@ -116,11 +116,35 @@ class AgentRunner:
                             "label": self._tool_label(tool_name, file_path, command, list_path),
                         },
                     )
+
+                    if tool_name == "call_sub_agent":
+                        yield await send(
+                            "sub_agent_start",
+                            {
+                                "session": tool_payload.get("session"),
+                                "agent": tool_payload.get("agent"),
+                                "task": tool_payload.get("task"),
+                                "wait_for_output": tool_payload.get("wait_for_output", True),
+                            },
+                        )
+
+                    sub_agent_events: list[tuple[str, dict]] = []
+
+                    async def on_sub_agent_event(event: str, data: dict) -> None:
+                        sub_agent_events.append((event, data))
+
                     result = await self.tool_registry.execute(
                         tool_name,
                         tool_args,
                         sandbox_adapter=sandbox_adapter,
                         sandbox_context=session.sandbox_context,
+                        provider=provider,
+                        model=request.model,
+                        api_key=request.api_key,
+                        base_url=request.base_url,
+                        chat_id=request.chat_id,
+                        session_store=self.session_store,
+                        on_event=on_sub_agent_event,
                     )
                     session.messages.append(
                         {
@@ -131,6 +155,21 @@ class AgentRunner:
                             "metadata": {"file_path": file_path},
                         }
                     )
+
+                    if tool_name == "call_sub_agent":
+                        for event_type, event_data in sub_agent_events:
+                            yield await send(event_type, event_data)
+                        data = result.get("data", {})
+                        if data.get("status") != "started":
+                            yield await send(
+                                "sub_agent_result",
+                                {
+                                    "session": data.get("session"),
+                                    "agent": data.get("agent"),
+                                    "result": data.get("result"),
+                                },
+                            )
+
                     yield await send(
                         "tool_result",
                         {

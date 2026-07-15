@@ -14,6 +14,22 @@ export interface ToolChip {
   resultData?: Record<string, unknown>
 }
 
+export interface SubAgentEvent {
+  type: 'sub_agent_token' | 'sub_agent_tool_call' | 'sub_agent_tool_result'
+  data: Record<string, unknown>
+}
+
+export interface SubAgentChip {
+  id: string
+  agent: string
+  session: string
+  task: string
+  waitForOutput: boolean
+  status: 'running' | 'waiting' | 'completed' | 'error'
+  result?: string
+  events: SubAgentEvent[]
+}
+
 export interface UiMessage {
   id: string
   role: ChatRole
@@ -21,6 +37,7 @@ export interface UiMessage {
   createdAt: string
   status?: 'idle' | 'streaming' | 'error'
   toolChips?: ToolChip[]
+  subAgentChips?: SubAgentChip[]
 }
 
 export interface BackendMessage {

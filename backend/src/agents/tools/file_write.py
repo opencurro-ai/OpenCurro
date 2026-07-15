@@ -26,7 +26,7 @@ FILE_WRITE_TOOL_SCHEMA = {
 }
 
 
-async def execute_file_write(*, sandbox_adapter, sandbox_context: SandboxContext, arguments: dict) -> ToolExecutionResult:
+async def execute_file_write(*, sandbox_adapter, sandbox_context: SandboxContext, arguments: dict, **kwargs) -> ToolExecutionResult:
     try:
         file_path = arguments["file_path"]
         content = arguments["content"]

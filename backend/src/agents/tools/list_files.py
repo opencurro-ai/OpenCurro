@@ -22,7 +22,7 @@ LIST_FILES_TOOL_SCHEMA = {
 }
 
 
-async def execute_list_files(*, sandbox_adapter, sandbox_context: SandboxContext, arguments: dict) -> ToolExecutionResult:
+async def execute_list_files(*, sandbox_adapter, sandbox_context: SandboxContext, arguments: dict, **kwargs) -> ToolExecutionResult:
     path = arguments.get("path")
     if not path:
         return ToolExecutionResult(

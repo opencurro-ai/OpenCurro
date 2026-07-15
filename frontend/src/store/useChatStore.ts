@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-import type { BackendMessage, ChatRecord, SandboxInfo, ToolChip, UiMessage } from '@/types/chat'
+import type { BackendMessage, ChatRecord, SandboxInfo, SubAgentChip, SubAgentEvent, ToolChip, UiMessage } from '@/types/chat'
 import { createId } from '@/utils/id'
 
 function createEmptyChat(): ChatRecord {
@@ -39,6 +39,9 @@ interface ChatState {
   markAssistantError: (chatId: string, message: string) => void
   addToolChip: (chatId: string, tool: ToolChip) => void
   updateLastToolChip: (chatId: string, updates: Partial<ToolChip>) => void
+  addSubAgentChip: (chatId: string, chip: SubAgentChip) => void
+  updateLastSubAgentChip: (chatId: string, updates: Partial<SubAgentChip>) => void
+  addSubAgentEvent: (chatId: string, event: SubAgentEvent) => void
   setSandboxInfo: (chatId: string, sandbox: SandboxInfo) => void
   replaceModelHistory: (chatId: string, history: BackendMessage[]) => void
   addEvent: (chatId: string, event: Record<string, unknown>) => void
@@ -158,6 +161,52 @@ export const useChatStore = create<ChatState>()(
                 return {
                   ...message,
                   toolChips: toolChips.map((chip, i) => i === toolChips.length - 1 ? { ...chip, ...updates } : chip),
+                }
+              }),
+            }
+          : chat),
+      })),
+      addSubAgentChip: (chatId, chip) => set((state) => ({
+        chats: state.chats.map((chat) => chat.id === chatId
+          ? {
+              ...chat,
+              messages: chat.messages.map((message, index) => index === chat.messages.length - 1 && message.role === 'assistant'
+                ? { ...message, subAgentChips: [...(message.subAgentChips ?? []), chip] }
+                : message),
+            }
+          : chat),
+      })),
+      updateLastSubAgentChip: (chatId, updates) => set((state) => ({
+        chats: state.chats.map((chat) => chat.id === chatId
+          ? {
+              ...chat,
+              messages: chat.messages.map((message, index) => {
+                if (index !== chat.messages.length - 1 || message.role !== 'assistant') return message
+                const chips = message.subAgentChips ?? []
+                if (chips.length === 0) return message
+                return {
+                  ...message,
+                  subAgentChips: chips.map((chip, i) => i === chips.length - 1 ? { ...chip, ...updates } : chip),
+                }
+              }),
+            }
+          : chat),
+      })),
+      addSubAgentEvent: (chatId, event) => set((state) => ({
+        chats: state.chats.map((chat) => chat.id === chatId
+          ? {
+              ...chat,
+              messages: chat.messages.map((message, index) => {
+                if (index !== chat.messages.length - 1 || message.role !== 'assistant') return message
+                const chips = message.subAgentChips ?? []
+                if (chips.length === 0) return message
+                return {
+                  ...message,
+                  subAgentChips: chips.map((chip, i) =>
+                    i === chips.length - 1
+                      ? { ...chip, events: [...chip.events, event] }
+                      : chip
+                  ),
                 }
               }),
             }

@@ -22,7 +22,7 @@ FILE_READ_TOOL_SCHEMA = {
 }
 
 
-async def execute_file_read(*, sandbox_adapter, sandbox_context: SandboxContext, arguments: dict) -> ToolExecutionResult:
+async def execute_file_read(*, sandbox_adapter, sandbox_context: SandboxContext, arguments: dict, **kwargs) -> ToolExecutionResult:
     file_path = arguments.get("file_path")
     try:
         content = await sandbox_adapter.read_file(sandbox_context, file_path)
