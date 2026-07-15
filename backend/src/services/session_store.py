@@ -113,7 +113,6 @@ class SessionStore:
         state.status = "completed"
         state.result = result
         state.error = None
-        state.background_task = None
         state.updated_at = datetime.utcnow()
 
     def fail_sub_agent_execution(self, chat_id: str, session_name: str, error: dict[str, Any]) -> None:
@@ -122,7 +121,6 @@ class SessionStore:
             return
         state.status = "error"
         state.error = error
-        state.background_task = None
         state.updated_at = datetime.utcnow()
 
     def get_sub_agent_execution(self, chat_id: str, session_name: str) -> Optional[SubAgentExecutionState]:

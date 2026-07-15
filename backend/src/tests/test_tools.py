@@ -164,7 +164,8 @@ def test_call_sub_agent_wait_for_output_false_starts_background_task() -> None:
         assert completed_state is not None
         assert completed_state.status == "completed"
         assert completed_state.result == "done"
-        assert completed_state.background_task is None
+        assert completed_state.background_task is not None
+        assert completed_state.background_task.done() is True
         assert completed_state.events[0]["event"] == "sub_agent_token"
         assert store.get_sub_agent_messages("chat-1", "research")[-1]["content"] == "done"
 
@@ -208,7 +209,49 @@ def test_call_sub_agent_wait_for_output_false_captures_background_errors() -> No
         assert errored_state.status == "error"
         assert errored_state.error is not None
         assert errored_state.error["code"] == "sub_agent_error"
-        assert errored_state.background_task is None
+        assert errored_state.background_task is not None
+        assert errored_state.background_task.done() is True
+
+    asyncio.run(run())
+
+
+def test_call_sub_agent_wait_for_output_false_streams_live_events() -> None:
+    async def run() -> None:
+        FakeSubAgentRunner.reset()
+        store = SessionStore()
+        captured_events: list[tuple[str, dict]] = []
+
+        async def on_event(event_type: str, data: dict) -> None:
+            captured_events.append((event_type, data))
+
+        result = await execute_call_sub_agent(
+            sandbox_adapter=FakeSandboxAdapter(),
+            sandbox_context=object(),
+            arguments={
+                "session": "research",
+                "agent": "deepexplorer",
+                "task": "Inspect the repository",
+                "wait_for_output": False,
+            },
+            provider=object(),
+            model="fake-model",
+            api_key="fake-key",
+            base_url=None,
+            chat_id="chat-live",
+            session_store=store,
+            on_event=on_event,
+            runner_factory=FakeSubAgentRunner,
+        )
+
+        assert result.ok is True
+        state = store.get_sub_agent_execution("chat-live", "research")
+        assert state is not None and state.background_task is not None
+
+        await asyncio.wait_for(state.background_task, timeout=1)
+
+        event_names = [event_name for event_name, _ in captured_events]
+        assert "sub_agent_token" in event_names
+        assert "sub_agent_result" in event_names
 
     asyncio.run(run())
 

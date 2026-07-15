@@ -15,7 +15,7 @@ export interface ToolChip {
 }
 
 export interface SubAgentEvent {
-  type: 'sub_agent_token' | 'sub_agent_tool_call' | 'sub_agent_tool_result'
+  type: 'sub_agent_token' | 'sub_agent_tool_call' | 'sub_agent_tool_result' | 'sub_agent_error'
   data: Record<string, unknown>
 }
 
@@ -27,6 +27,7 @@ export interface SubAgentChip {
   waitForOutput: boolean
   status: 'running' | 'waiting' | 'completed' | 'error'
   result?: string
+  error?: string
   events: SubAgentEvent[]
 }
 

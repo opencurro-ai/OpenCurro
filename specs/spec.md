@@ -43,7 +43,7 @@ A production-grade web application for running an autonomous file-capable AI age
 | Provider management and model discovery | done | `specs/provider-management/document.md` |
 | Novita sandbox integration and file tools | done | `specs/sandbox-integration/document.md` |
 | Frontend chat workspace and local persistence | done | `specs/frontend-workspace/document.md` |
-| Sub-agent background execution and session tracking | done | `specs/subagent-background-execution/document.md` |
+| Sub-agent background execution and session tracking | in-progress | `specs/subagent-background-execution/document.md` |
 
 ## Notes from research
 - OpenRouter exposes an OpenAI-compatible chat completions API at `https://openrouter.ai/api/v1/chat/completions`, supports `tools`, requires keeping `tools` on tool-result follow-up calls, and streams via SSE.
@@ -61,4 +61,4 @@ A production-grade web application for running an autonomous file-capable AI age
 6. Validate lint, build, backend tests, and browser behavior.
 
 ## Status
-Background sub-agent execution fix completed and validated with backend tests, frontend lint/build, API checks, and browser-based UI verification.
+Background sub-agent execution and live streaming refinement in progress. Existing fixes and validations are being extended so background sub-agent runs stream activity and completion back through the active chat turn.

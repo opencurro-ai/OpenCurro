@@ -100,6 +100,9 @@ function SubAgentDialog({ chip, isOpen, onClose }: { chip: SubAgentChip; isOpen:
     .map((ev) => String(ev.data.value ?? ''))
     .join('')
 
+  const latestErrorEvent = [...chip.events].reverse().find((ev) => ev.type === 'sub_agent_error')
+  const errorMessage = chip.error ?? (latestErrorEvent ? String(latestErrorEvent.data.message ?? 'Sub-agent failed.') : '')
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="relative w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-[18px] border border-border bg-white shadow-xl mx-4 flex flex-col">
@@ -170,6 +173,15 @@ function SubAgentDialog({ chip, isOpen, onClose }: { chip: SubAgentChip; isOpen:
                     }
                     return null
                   })}
+                </div>
+              </div>
+            ) : null}
+
+            {errorMessage ? (
+              <div className="space-y-2">
+                <div className="text-[11px] uppercase tracking-wider text-[#ef4444] font-medium">Error</div>
+                <div className="text-[13px] leading-relaxed text-[#dc2626] bg-[#fef2f2] rounded-[12px] px-4 py-3 whitespace-pre-wrap">
+                  {errorMessage}
                 </div>
               </div>
             ) : null}

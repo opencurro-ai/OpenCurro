@@ -86,7 +86,12 @@ async def execute_call_sub_agent(
 
     runner_factory = kwargs.get("runner_factory", SubAgentRunner)
 
-    async def run_sub_agent(*, emit_live_events: bool, initialize_state: bool) -> ToolExecutionResult:
+    async def run_sub_agent(
+        *,
+        emit_live_events: bool,
+        initialize_state: bool,
+        emit_completion_event: bool,
+    ) -> ToolExecutionResult:
         existing_messages: list[dict[str, Any]] = []
         if session_store is not None and chat_id:
             existing_messages = list(session_store.get_sub_agent_messages(chat_id, session_name))
@@ -127,6 +132,16 @@ async def execute_call_sub_agent(
                 session_store.set_sub_agent_messages(chat_id, session_name, updated_messages)
                 session_store.complete_sub_agent_execution(chat_id, session_name, result_text)
 
+            if emit_completion_event and emit_live_events and on_event:
+                await on_event(
+                    "sub_agent_result",
+                    {
+                        "session": session_name,
+                        "agent": agent_name,
+                        "result": result_text,
+                    },
+                )
+
             return ToolExecutionResult(
                 ok=True,
                 data={
@@ -145,6 +160,9 @@ async def execute_call_sub_agent(
             }
             if session_store is not None and chat_id:
                 session_store.fail_sub_agent_execution(chat_id, session_name, error_payload)
+
+            if emit_completion_event and emit_live_events and on_event:
+                await on_event("sub_agent_error", error_payload)
 
             return ToolExecutionResult(
                 ok=False,
@@ -166,7 +184,11 @@ async def execute_call_sub_agent(
             )
 
         background_task = asyncio.create_task(
-            run_sub_agent(emit_live_events=False, initialize_state=False),
+            run_sub_agent(
+                emit_live_events=on_event is not None,
+                initialize_state=False,
+                emit_completion_event=True,
+            ),
             name=f"sub-agent:{chat_id or 'anonymous'}:{session_name}:{agent_name}",
         )
 
@@ -183,4 +205,8 @@ async def execute_call_sub_agent(
             },
         )
 
-    return await run_sub_agent(emit_live_events=True, initialize_state=True)
+    return await run_sub_agent(
+        emit_live_events=True,
+        initialize_state=True,
+        emit_completion_event=False,
+    )
