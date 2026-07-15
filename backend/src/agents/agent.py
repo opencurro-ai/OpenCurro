@@ -128,24 +128,45 @@ class AgentRunner:
                             },
                         )
 
-                    sub_agent_events: list[tuple[str, dict]] = []
+                    event_queue: asyncio.Queue = asyncio.Queue()
 
                     async def on_sub_agent_event(event: str, data: dict) -> None:
-                        sub_agent_events.append((event, data))
+                        await event_queue.put((event, data))
 
-                    result = await self.tool_registry.execute(
-                        tool_name,
-                        tool_args,
-                        sandbox_adapter=sandbox_adapter,
-                        sandbox_context=session.sandbox_context,
-                        provider=provider,
-                        model=request.model,
-                        api_key=request.api_key,
-                        base_url=request.base_url,
-                        chat_id=request.chat_id,
-                        session_store=self.session_store,
-                        on_event=on_sub_agent_event,
+                    tool_task = asyncio.create_task(
+                        self.tool_registry.execute(
+                            tool_name,
+                            tool_args,
+                            sandbox_adapter=sandbox_adapter,
+                            sandbox_context=session.sandbox_context,
+                            provider=provider,
+                            model=request.model,
+                            api_key=request.api_key,
+                            base_url=request.base_url,
+                            chat_id=request.chat_id,
+                            session_store=self.session_store,
+                            on_event=on_sub_agent_event,
+                        )
                     )
+
+                    while True:
+                        get_task = asyncio.create_task(event_queue.get())
+                        done, pending = await asyncio.wait(
+                            [get_task, tool_task],
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+
+                        if tool_task in done:
+                            get_task.cancel()
+                            while not event_queue.empty():
+                                event_type, event_data = event_queue.get_nowait()
+                                yield await send(event_type, event_data)
+                            result = tool_task.result()
+                            break
+
+                        event_type, event_data = get_task.result()
+                        yield await send(event_type, event_data)
+
                     session.messages.append(
                         {
                             "role": "tool",
@@ -157,8 +178,6 @@ class AgentRunner:
                     )
 
                     if tool_name == "call_sub_agent":
-                        for event_type, event_data in sub_agent_events:
-                            yield await send(event_type, event_data)
                         data = result.get("data", {})
                         if data.get("status") != "started":
                             yield await send(
