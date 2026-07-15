@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Menu, Settings, Terminal } from 'lucide-react'
+import { FolderOpen, Menu, Settings, Terminal } from 'lucide-react'
 
 import { Composer } from '@/components/chat/Composer'
 import type { ChatRecord, ToolChip } from '@/types/chat'
@@ -74,6 +74,59 @@ function TerminalOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: bo
             </div>
           ) : (
             <div className="text-[#858481]">No output</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ListFilesOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: boolean; onToggle: () => void }) {
+  const resultData = chip.resultData
+  const data = (resultData?.data as Record<string, unknown> | undefined) ?? resultData
+  const items = data?.items as Array<{ name: string; type: string; path: string; size?: number | null }> | undefined
+  const isRunning = chip.ok === undefined
+
+  const statusLabel = isRunning ? 'running...' : chip.ok ? 'done' : 'error'
+
+  return (
+    <div className="overflow-hidden rounded-[18px] border border-border bg-white shadow-sm">
+      <button
+        onClick={onToggle}
+        className={`flex w-full items-center gap-2 px-4 py-3 text-left text-xs transition-colors hover:bg-[rgba(55,53,47,0.04)] ${chip.ok === false ? 'text-[#ef4444]' : 'text-[#34322d]'}`}
+      >
+        <FolderOpen className="size-[14px] shrink-0 text-[#858481]" />
+        <span className="flex-1 truncate text-[13px]">
+          {chip.label}
+        </span>
+        <span className={`shrink-0 text-[11px] ${isRunning ? 'animate-pulse text-[#858481]' : chip.ok ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+          {statusLabel}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="border-t border-border p-4 font-mono text-[13px] leading-relaxed bg-[#f5f5f5]">
+          <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-wider text-[#858481]">
+            <FolderOpen className="size-3" />
+            <span>{chip.path || 'directory'}</span>
+          </div>
+          {items ? (
+            <div className="space-y-1">
+              {items.map((item) => (
+                <div key={item.path} className="flex items-center gap-2 text-[13px]">
+                  <span className={`shrink-0 ${item.type === 'dir' ? 'text-[#f59e0b]' : 'text-[#858481]'}`}>
+                    {item.type === 'dir' ? '📁' : '📄'}
+                  </span>
+                  <span className="text-[#34322d]">{item.name}</span>
+                  {item.type === 'file' && item.size != null ? (
+                    <span className="ml-auto text-[11px] text-[#858481]">{item.size} B</span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : chip.ok === false ? (
+            <div className="text-[#ef4444]">Failed to list directory</div>
+          ) : (
+            <div className="text-[#858481]">No files found</div>
           )}
         </div>
       )}
@@ -173,6 +226,10 @@ export function ChatWorkspace({
                         tool.name === 'shall_tool' ? (
                           <div key={tool.id} className="w-full max-w-xl">
                             <TerminalOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
+                          </div>
+                        ) : tool.name === 'list_files' ? (
+                          <div key={tool.id} className="w-full max-w-xl">
+                            <ListFilesOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
                           </div>
                         ) : (
                           <span key={tool.id} className={`inline-flex items-center gap-2 px-3 py-[6px] rounded-full bg-white border border-border text-xs text-[#34322d] shadow-sm ${tool.ok === false ? 'border-red-300 bg-red-50 text-red-600' : ''}`}>

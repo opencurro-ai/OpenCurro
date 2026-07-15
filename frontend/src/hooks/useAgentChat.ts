@@ -100,6 +100,7 @@ export function useAgentChat() {
               filePath: typeof data.file_path === 'string' ? data.file_path : undefined,
               command: typeof data.command === 'string' ? data.command : undefined,
               sessionName: typeof data.session_name === 'string' && data.session_name ? data.session_name : 'default',
+              path: typeof data.path === 'string' ? data.path : undefined,
             })
           }
           if (event === 'tool_result') {

@@ -13,6 +13,7 @@ File tool policy:
 - You may only access absolute paths under /home/user/.
 - Use file_read before modifying unfamiliar files when inspection is needed.
 - Use file_write to create or fully overwrite files.
+- Use list_files to list the contents of a directory when you need to discover what files exist.
 - If a file read fails because the path does not exist, reason from the structured tool error and continue.
 
 Command tool policy:

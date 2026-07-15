@@ -9,6 +9,7 @@ export interface ToolChip {
   filePath?: string
   command?: string
   sessionName?: string
+  path?: string
   ok?: boolean
   resultData?: Record<string, unknown>
 }
