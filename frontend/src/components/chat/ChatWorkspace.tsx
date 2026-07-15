@@ -93,6 +93,13 @@ function SubAgentDialog({ chip, isOpen, onClose }: { chip: SubAgentChip; isOpen:
     : chip.status === 'error' ? 'text-[#ef4444]'
     : 'text-[#858481]'
 
+  const isActive = chip.status === 'running' || chip.status === 'waiting'
+
+  const accumulatedText = chip.events
+    .filter((ev) => ev.type === 'sub_agent_token')
+    .map((ev) => String(ev.data.value ?? ''))
+    .join('')
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="relative w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-[18px] border border-border bg-white shadow-xl mx-4 flex flex-col">
@@ -117,76 +124,65 @@ function SubAgentDialog({ chip, isOpen, onClose }: { chip: SubAgentChip; isOpen:
         </div>
 
         <div className="flex-1 overflow-auto p-5 min-h-0">
-          {chip.status === 'waiting' ? (
-            <div className="flex items-center gap-2 text-[13px] text-[#858481]">
-              <span className="inline-block size-2 animate-pulse rounded-full bg-[#ffc700]" />
-              Waiting for sub-agent result...
-            </div>
-          ) : chip.status === 'running' ? (
-            <div className="flex items-center gap-2 text-[13px] text-[#858481]">
-              <span className="inline-block size-2 animate-pulse rounded-full bg-[#ffc700]" />
-              Running sub-agent in background...
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="text-[11px] uppercase tracking-wider text-[#858481] font-medium">Task</div>
-              <div className="text-[13px] text-[#34322d] bg-[#f5f5f5] rounded-[12px] px-4 py-3">{chip.task}</div>
+          <div className="space-y-4">
+            <div className="text-[11px] uppercase tracking-wider text-[#858481] font-medium">Task</div>
+            <div className="text-[13px] text-[#34322d] bg-[#f5f5f5] rounded-[12px] px-4 py-3">{chip.task}</div>
 
-              {chip.events.length > 0 ? (
-                <div className="space-y-2">
-                  <div className="text-[11px] uppercase tracking-wider text-[#858481] font-medium">Activity</div>
-                  <div className="space-y-1.5">
-                    {chip.events.map((ev, i) => {
-                      if (ev.type === 'sub_agent_tool_call') {
-                        const name = ev.data.name as string
-                        const filePath = ev.data.file_path as string | undefined
-                        const label = ev.data.label as string | undefined
-                        return (
-                          <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-[10px] bg-[#f5f5f5] text-[12px]">
-                            <FolderOpen className="size-[12px] shrink-0 text-[#858481]" />
-                            <span className="text-[#34322d]">{label || name}</span>
-                            {filePath ? <span className="text-[#858481] font-mono text-[11px] truncate">{filePath}</span> : null}
-                            <span className="ml-auto text-[11px] text-[#858481]">running...</span>
-                          </div>
-                        )
-                      }
-                      if (ev.type === 'sub_agent_tool_result') {
-                        const name = ev.data.name as string
-                        const ok = ev.data.ok as boolean
-                        const filePath = ev.data.file_path as string | undefined
-                        return (
-                          <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-[10px] text-[12px] ${ok ? 'bg-[#f0fdf4]' : 'bg-[#fef2f2]'}`}>
-                            <FolderOpen className={`size-[12px] shrink-0 ${ok ? 'text-[#22c55e]' : 'text-[#ef4444]'}`} />
-                            <span className={ok ? 'text-[#16a34a]' : 'text-[#dc2626]'}>
-                              {name} {ok ? 'done' : 'failed'}
-                            </span>
-                            {filePath ? <span className="text-[#858481] font-mono text-[11px] truncate">{filePath}</span> : null}
-                          </div>
-                        )
-                      }
-                      if (ev.type === 'sub_agent_token') {
-                        return (
-                          <div key={i} className="text-[12px] leading-relaxed text-[#34322d]">
-                            {(ev.data.value as string) || ''}
-                          </div>
-                        )
-                      }
-                      return null
-                    })}
-                  </div>
+            {chip.events.length > 0 ? (
+              <div className="space-y-2">
+                <div className="text-[11px] uppercase tracking-wider text-[#858481] font-medium">Activity</div>
+                <div className="space-y-1.5">
+                  {accumulatedText ? (
+                    <div className="text-[13px] leading-relaxed text-[#34322d] bg-[#f5f5f5] rounded-[12px] px-4 py-3 whitespace-pre-wrap">
+                      {accumulatedText}
+                      {isActive ? (
+                        <span className="inline-block size-2 animate-pulse rounded-full bg-[#ffc700] ml-1 align-middle" />
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {chip.events.map((ev, i) => {
+                    if (ev.type === 'sub_agent_tool_call') {
+                      const name = ev.data.name as string
+                      const filePath = ev.data.file_path as string | undefined
+                      const label = ev.data.label as string | undefined
+                      return (
+                        <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-[10px] bg-[#f5f5f5] text-[12px]">
+                          <FolderOpen className="size-[12px] shrink-0 text-[#858481]" />
+                          <span className="text-[#34322d]">{label || name}</span>
+                          {filePath ? <span className="text-[#858481] font-mono text-[11px] truncate">{filePath}</span> : null}
+                          <span className="ml-auto text-[11px] text-[#858481]">running...</span>
+                        </div>
+                      )
+                    }
+                    if (ev.type === 'sub_agent_tool_result') {
+                      const name = ev.data.name as string
+                      const ok = ev.data.ok as boolean
+                      const filePath = ev.data.file_path as string | undefined
+                      return (
+                        <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-[10px] text-[12px] ${ok ? 'bg-[#f0fdf4]' : 'bg-[#fef2f2]'}`}>
+                          <FolderOpen className={`size-[12px] shrink-0 ${ok ? 'text-[#22c55e]' : 'text-[#ef4444]'}`} />
+                          <span className={ok ? 'text-[#16a34a]' : 'text-[#dc2626]'}>
+                            {name} {ok ? 'done' : 'failed'}
+                          </span>
+                          {filePath ? <span className="text-[#858481] font-mono text-[11px] truncate">{filePath}</span> : null}
+                        </div>
+                      )
+                    }
+                    return null
+                  })}
                 </div>
-              ) : null}
+              </div>
+            ) : null}
 
-              {chip.result ? (
-                <div className="space-y-2">
-                  <div className="text-[11px] uppercase tracking-wider text-[#858481] font-medium">Result</div>
-                  <div className="text-[13px] leading-relaxed text-[#34322d] bg-[#f5f5f5] rounded-[12px] px-4 py-3 whitespace-pre-wrap">
-                    {chip.result}
-                  </div>
+            {chip.result ? (
+              <div className="space-y-2">
+                <div className="text-[11px] uppercase tracking-wider text-[#858481] font-medium">Result</div>
+                <div className="text-[13px] leading-relaxed text-[#34322d] bg-[#f5f5f5] rounded-[12px] px-4 py-3 whitespace-pre-wrap">
+                  {chip.result}
                 </div>
-              ) : null}
-            </div>
-          )}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
