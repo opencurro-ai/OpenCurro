@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
 
 import { fetchSandboxFiles } from '@/lib/api'
@@ -66,7 +66,7 @@ export function FileExplorer({ chat }: { chat: ChatRecord }) {
 
   const ready = useMemo(() => Boolean(chat.sandbox?.sandboxId), [chat.sandbox])
 
-  const loadFiles = async () => {
+  const loadFiles = useCallback(async () => {
     if (!ready) {
       setNodes([])
       return
@@ -81,11 +81,11 @@ export function FileExplorer({ chat }: { chat: ChatRecord }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [chat.id, ready])
 
   useEffect(() => {
     void loadFiles()
-  }, [chat.id, chat.sandbox?.sandboxId])
+  }, [loadFiles])
 
   return (
     <div className="flex-1 min-h-0 bg-white border border-border rounded-[24px] shadow-lg overflow-hidden flex flex-col">

@@ -131,7 +131,7 @@ class SubAgentRunner:
 
             final_text = "".join(assistant_content_parts)
             full_messages.append({"role": "assistant", "content": final_text})
-            return {"result": final_text, "messages": full_messages}
+            return {"result": final_text, "messages": full_messages[1:]}
 
     def _merge_tool_calls(self, accumulated: list[dict], incoming: list[dict]) -> list[dict]:
         merged = accumulated[:] if accumulated else []
