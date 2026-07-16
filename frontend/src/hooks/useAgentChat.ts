@@ -13,9 +13,6 @@ export function useAgentChat() {
     addEvent,
     addToolChip,
     updateLastToolChip,
-    addSubAgentChip,
-    updateLastSubAgentChip,
-    addSubAgentEvent,
     appendAssistantToken,
     finalizeAssistantMessage,
     markAssistantError,
@@ -112,43 +109,6 @@ export function useAgentChat() {
               resultData: typeof data.result === 'object' && data.result !== null ? data.result as Record<string, unknown> : undefined,
             })
           }
-          if (event === 'sub_agent_start') {
-            addSubAgentChip(chatId, {
-              id: createId('subagent'),
-              agent: typeof data.agent === 'string' ? data.agent : 'deepexplorer',
-              session: typeof data.session === 'string' ? data.session : '',
-              task: typeof data.task === 'string' ? data.task : '',
-              waitForOutput: data.wait_for_output === true,
-              status: data.wait_for_output === true ? 'waiting' : 'running',
-              events: [],
-            })
-          }
-          if (event === 'sub_agent_token') {
-            updateLastSubAgentChip(chatId, { status: 'running' })
-            addSubAgentEvent(chatId, { type: 'sub_agent_token', data })
-          }
-          if (event === 'sub_agent_tool_call') {
-            updateLastSubAgentChip(chatId, { status: 'running' })
-            addSubAgentEvent(chatId, { type: 'sub_agent_tool_call', data })
-          }
-          if (event === 'sub_agent_tool_result') {
-            updateLastSubAgentChip(chatId, { status: 'running' })
-            addSubAgentEvent(chatId, { type: 'sub_agent_tool_result', data })
-          }
-          if (event === 'sub_agent_result') {
-            updateLastSubAgentChip(chatId, {
-              status: 'completed',
-              result: typeof data.result === 'string' ? data.result : undefined,
-              error: undefined,
-            })
-          }
-          if (event === 'sub_agent_error') {
-            addSubAgentEvent(chatId, { type: 'sub_agent_error', data })
-            updateLastSubAgentChip(chatId, {
-              status: 'error',
-              error: typeof data.message === 'string' ? data.message : 'Sub-agent failed.',
-            })
-          }
           if (event === 'token') {
             const token = typeof data.value === 'string' ? data.value : ''
             appendAssistantToken(chatId, token)
@@ -180,14 +140,11 @@ export function useAgentChat() {
     activeChatId,
     addEvent,
     addToolChip,
-    addSubAgentChip,
-    addSubAgentEvent,
     addUserMessage,
     appendAssistantToken,
     chats,
     finalizeAssistantMessage,
     markAssistantError,
-    updateLastSubAgentChip,
     updateLastToolChip,
     novitaApiKey,
     novitaTemplateId,
