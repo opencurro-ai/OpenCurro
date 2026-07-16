@@ -13,6 +13,11 @@ export function useAgentChat() {
     addEvent,
     addToolChip,
     updateLastToolChip,
+    addSubAgentChip,
+    appendSubAgentToken,
+    addSubAgentToolChip,
+    updateLastSubAgentToolChip,
+    updateSubAgentStatus,
     appendAssistantToken,
     finalizeAssistantMessage,
     markAssistantError,
@@ -109,6 +114,49 @@ export function useAgentChat() {
               resultData: typeof data.result === 'object' && data.result !== null ? data.result as Record<string, unknown> : undefined,
             })
           }
+          if (event === 'subagent_start') {
+            const session = typeof data.session === 'string' ? data.session : 'default'
+            const agent = typeof data.agent === 'string' ? data.agent : 'agent'
+            addSubAgentChip(chatId, {
+              id: createId('subagent'),
+              session,
+              agent,
+              output: '',
+              toolChips: [],
+              status: 'running',
+            })
+          }
+          if (event === 'subagent_token') {
+            const session = typeof data.session === 'string' ? data.session : 'default'
+            const token = typeof data.value === 'string' ? data.value : ''
+            appendSubAgentToken(chatId, session, token)
+          }
+          if (event === 'subagent_tool_call') {
+            const session = typeof data.session === 'string' ? data.session : 'default'
+            addSubAgentToolChip(chatId, session, {
+              id: createId('tool'),
+              name: typeof data.name === 'string' ? data.name : 'tool',
+              label: typeof data.label === 'string' ? data.label : 'Tool activity',
+              filePath: typeof data.file_path === 'string' ? data.file_path : undefined,
+              path: typeof data.path === 'string' ? data.path : undefined,
+            })
+          }
+          if (event === 'subagent_tool_result') {
+            const session = typeof data.session === 'string' ? data.session : 'default'
+            updateLastSubAgentToolChip(chatId, session, {
+              ok: typeof data.ok === 'boolean' ? data.ok : undefined,
+              resultData: typeof data.result === 'object' && data.result !== null ? data.result as Record<string, unknown> : undefined,
+            })
+          }
+          if (event === 'subagent_complete') {
+            const session = typeof data.session === 'string' ? data.session : 'default'
+            updateSubAgentStatus(chatId, session, 'completed')
+          }
+          if (event === 'subagent_error') {
+            const session = typeof data.session === 'string' ? data.session : 'default'
+            const message = typeof data.message === 'string' ? data.message : 'Sub-agent error'
+            updateSubAgentStatus(chatId, session, 'error', message)
+          }
           if (event === 'token') {
             const token = typeof data.value === 'string' ? data.value : ''
             appendAssistantToken(chatId, token)
@@ -140,6 +188,11 @@ export function useAgentChat() {
     activeChatId,
     addEvent,
     addToolChip,
+    addSubAgentChip,
+    addSubAgentToolChip,
+    appendSubAgentToken,
+    updateLastSubAgentToolChip,
+    updateSubAgentStatus,
     addUserMessage,
     appendAssistantToken,
     chats,

@@ -8,49 +8,72 @@ from src.services.session_store import SessionStore
 def build_sandbox_router(session_store: SessionStore, sandbox_registry: SandboxRegistry) -> APIRouter:
     router = APIRouter(prefix="/sandbox", tags=["sandbox"])
 
+    def _get_session(chat_id: str):
+        try:
+            session = session_store.get(chat_id)
+            if session is None or session.sandbox_context is None:
+                raise HTTPException(status_code=404, detail="No active sandbox for this chat.")
+            return session
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Session lookup failed: {exc}") from exc
+
+    def _get_adapter(provider: str):
+        try:
+            return sandbox_registry.get(provider)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Sandbox adapter error: {exc}") from exc
+
     @router.get("/files", response_model=SandboxFilesResponse)
     async def list_sandbox_files(
         chat_id: str = Query(...),
         path: str = Query("/home/user"),
         depth: int = Query(4, ge=1, le=8),
     ) -> SandboxFilesResponse:
-        session = session_store.get(chat_id)
-        if session is None or session.sandbox_context is None:
-            raise HTTPException(status_code=404, detail="No active sandbox for this chat.")
-
-        adapter = sandbox_registry.get(session.sandbox_context.provider)
-        tree = await adapter.list_tree(session.sandbox_context, path=path, depth=depth)
-        sandbox = SandboxSummary(
-            sandbox_id=session.sandbox_context.sandbox_id,
-            provider=session.sandbox_context.provider,
-            root_path=session.sandbox_context.root_path,
-            created_at=session.sandbox_context.created_at,
-            timeout_seconds=session.sandbox_context.timeout_seconds,
-            template_id=session.sandbox_context.template_id,
-        )
-        return SandboxFilesResponse(sandbox=sandbox, path=path, tree=tree)
+        session = _get_session(chat_id)
+        try:
+            adapter = _get_adapter(session.sandbox_context.provider)
+            tree = await adapter.list_tree(session.sandbox_context, path=path, depth=depth)
+            sandbox = SandboxSummary(
+                sandbox_id=session.sandbox_context.sandbox_id,
+                provider=session.sandbox_context.provider,
+                root_path=session.sandbox_context.root_path,
+                created_at=session.sandbox_context.created_at,
+                timeout_seconds=session.sandbox_context.timeout_seconds,
+                template_id=session.sandbox_context.template_id,
+            )
+            return SandboxFilesResponse(sandbox=sandbox, path=path, tree=tree)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to list files: {exc}") from exc
 
     @router.get("/file-content")
     async def read_sandbox_file(
         chat_id: str = Query(...),
         path: str = Query(...),
     ) -> dict:
-        session = session_store.get(chat_id)
-        if session is None or session.sandbox_context is None:
-            raise HTTPException(status_code=404, detail="No active sandbox for this chat.")
-
-        adapter = sandbox_registry.get(session.sandbox_context.provider)
-        content = await adapter.read_file(session.sandbox_context, path)
-        return {"path": path, "content": content}
+        session = _get_session(chat_id)
+        try:
+            adapter = _get_adapter(session.sandbox_context.provider)
+            content = await adapter.read_file(session.sandbox_context, path)
+            return {"path": path, "content": content}
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to read file: {exc}") from exc
 
     @router.post("/file-content")
     async def write_sandbox_file(request: WriteFileRequest) -> dict:
-        session = session_store.get(request.chat_id)
-        if session is None or session.sandbox_context is None:
-            raise HTTPException(status_code=404, detail="No active sandbox for this chat.")
-
-        adapter = sandbox_registry.get(session.sandbox_context.provider)
-        await adapter.write_file(session.sandbox_context, request.path, request.content)
-        return {"path": request.path, "ok": True}
+        session = _get_session(request.chat_id)
+        try:
+            adapter = _get_adapter(session.sandbox_context.provider)
+            await adapter.write_file(session.sandbox_context, request.path, request.content)
+            return {"path": request.path, "ok": True}
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to write file: {exc}") from exc
 
     return router

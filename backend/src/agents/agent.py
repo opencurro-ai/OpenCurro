@@ -1,6 +1,6 @@
+import asyncio
 import json
 import re
-import asyncio
 from typing import Any, AsyncGenerator, Optional
 
 from src.agents.providers.registry import ProviderRegistry
@@ -9,6 +9,8 @@ from src.agents.systemprompts.systemprompt import SYSTEM_PROMPT
 from src.agents.tools.registry import ToolRegistry
 from src.schemas.chat import ChatMessage, ChatStreamRequest
 from src.services.session_store import SessionStore
+
+import src.agents.subagents.deepexplorer.agent  # noqa: F401 – triggers sub-agent registration
 
 
 class AgentRunner:
@@ -24,29 +26,35 @@ class AgentRunner:
         self.sandbox_registry = sandbox_registry
         self.tool_registry = tool_registry
         self.session_store = session_store
+        self.subagent_sessions: dict[str, list[dict[str, Any]]] = {}
 
     async def stream_turn(self, request: ChatStreamRequest) -> AsyncGenerator[str, None]:
-        session = self.session_store.upsert_history(request.chat_id, request.history)
-        session.messages.append(ChatMessage(role="user", content=request.user_message).model_dump(exclude_none=True))
-
         async def send(event: str, data: dict) -> str:
             return self._sse(event, data)
 
+        try:
+            session = self.session_store.upsert_history(request.chat_id, request.history)
+            session.messages.append(ChatMessage(role="user", content=request.user_message).model_dump(exclude_none=True))
+        except Exception as exc:
+            yield await send("error", {"message": f"Session setup failed: {exc}", "code": "session_setup_failed"})
+            yield await send("done", {"ok": False})
+            return
+
         yield await send("iteration", {"current": 0, "limit": request.max_iterations})
 
-        sandbox_adapter = self.sandbox_registry.get(request.sandbox.provider)
+        try:
+            sandbox_adapter = self.sandbox_registry.get(request.sandbox.provider)
+        except Exception as exc:
+            yield await send("error", {"message": f"Sandbox adapter error: {exc}", "code": "sandbox_adapter_error"})
+            yield await send("done", {"ok": False})
+            return
+
         if session.sandbox_context is None:
             yield await send("status", {"state": "creating_sandbox", "label": "Creating sandbox..."})
             try:
                 session.sandbox_context = await sandbox_adapter.create(request.sandbox)
             except Exception as exc:
-                yield await send(
-                    "error",
-                    {
-                        "message": f"Sandbox creation failed: {exc}",
-                        "code": "sandbox_create_failed",
-                    },
-                )
+                yield await send("error", {"message": f"Sandbox creation failed: {exc}", "code": "sandbox_create_failed"})
                 yield await send("done", {"ok": False})
                 return
             yield await send(
@@ -58,7 +66,13 @@ class AgentRunner:
                 },
             )
 
-        provider = self.provider_registry.get(request.provider)
+        try:
+            provider = self.provider_registry.get(request.provider)
+        except Exception as exc:
+            yield await send("error", {"message": f"Provider error: {exc}", "code": "provider_error"})
+            yield await send("done", {"ok": False})
+            return
+
         visible_answer_parts: list[str] = []
         iteration = 0
 
@@ -71,102 +85,150 @@ class AgentRunner:
             streamed_tool_calls: list[dict] = []
             finish_reason: Optional[str] = None
 
-            async for delta in provider.stream_chat_completion(
-                api_key=request.api_key,
-                model=request.model,
-                messages=self._build_provider_messages(session.messages),
-                tools=self.tool_registry.schemas,
-                base_url=request.base_url,
-            ):
-                if delta.text:
-                    cleaned = self._normalize_delta(delta.text)
-                    if cleaned:
-                        assistant_content_parts.append(cleaned)
-                        visible_answer_parts.append(cleaned)
-                        yield await send("token", {"value": cleaned})
-                if delta.tool_calls:
-                    streamed_tool_calls = self._merge_tool_calls(streamed_tool_calls, delta.tool_calls)
-                if delta.finish_reason:
-                    finish_reason = delta.finish_reason
+            try:
+                async for delta in provider.stream_chat_completion(
+                    api_key=request.api_key,
+                    model=request.model,
+                    messages=self._build_provider_messages(session.messages),
+                    tools=self.tool_registry.schemas,
+                    base_url=request.base_url,
+                ):
+                    if delta.text:
+                        cleaned = self._normalize_delta(delta.text)
+                        if cleaned:
+                            assistant_content_parts.append(cleaned)
+                            visible_answer_parts.append(cleaned)
+                            yield await send("token", {"value": cleaned})
+                    if delta.tool_calls:
+                        streamed_tool_calls = self._merge_tool_calls(streamed_tool_calls, delta.tool_calls)
+                    if delta.finish_reason:
+                        finish_reason = delta.finish_reason
+            except Exception as exc:
+                yield await send(
+                    "error",
+                    {
+                        "message": f"Provider API error: {exc}",
+                        "code": "provider_api_error",
+                    },
+                )
+                yield await send("done", {"ok": False})
+                return
 
-            if streamed_tool_calls or finish_reason == "tool_calls":
-                assistant_tool_message = {
-                    "role": "assistant",
-                    "content": "".join(assistant_content_parts) or None,
-                    "tool_calls": streamed_tool_calls,
-                }
-                session.messages.append(assistant_tool_message)
+            try:
+                if streamed_tool_calls or finish_reason == "tool_calls":
+                    assistant_tool_message = {
+                        "role": "assistant",
+                        "content": "".join(assistant_content_parts) or None,
+                        "tool_calls": streamed_tool_calls,
+                    }
+                    session.messages.append(assistant_tool_message)
 
-                for tool_call in streamed_tool_calls:
-                    tool_name = tool_call.get("function", {}).get("name", "unknown")
-                    tool_args = tool_call.get("function", {}).get("arguments", "{}")
-                    tool_payload = self._safe_json_loads(tool_args)
-                    file_path = tool_payload.get("file_path")
-                    command = tool_payload.get("command")
-                    session_name = tool_payload.get("session_name") or tool_payload.get("session") or "default"
-                    list_path = tool_payload.get("path")
-                    yield await send(
-                        "tool_call",
-                        {
-                            "name": tool_name,
-                            "file_path": file_path,
-                            "command": command,
-                            "session_name": session_name,
-                            "path": list_path,
-                            "label": self._tool_label(tool_name, file_path, command, list_path),
-                        },
-                    )
-
-                    tool_task = asyncio.create_task(
-                        self.tool_registry.execute(
-                            tool_name,
-                            tool_args,
-                            sandbox_adapter=sandbox_adapter,
-                            sandbox_context=session.sandbox_context,
-                            provider=provider,
-                            model=request.model,
-                            api_key=request.api_key,
-                            base_url=request.base_url,
-                            chat_id=request.chat_id,
-                            session_store=self.session_store,
+                    for tool_call in streamed_tool_calls:
+                        tool_name = tool_call.get("function", {}).get("name", "unknown")
+                        tool_args = tool_call.get("function", {}).get("arguments", "{}")
+                        tool_payload = self._safe_json_loads(tool_args)
+                        file_path = tool_payload.get("file_path")
+                        command = tool_payload.get("command")
+                        session_name = tool_payload.get("session_name") or tool_payload.get("session") or "default"
+                        list_path = tool_payload.get("path")
+                        yield await send(
+                            "tool_call",
+                            {
+                                "name": tool_name,
+                                "file_path": file_path,
+                                "command": command,
+                                "session_name": session_name,
+                                "path": list_path,
+                                "label": self._tool_label(tool_name, file_path, command, list_path),
+                            },
                         )
-                    )
 
-                    result = await tool_task
+                        subagent_event_queue: asyncio.Queue = asyncio.Queue()
 
-                    session.messages.append(
-                        {
-                            "role": "tool",
-                            "tool_call_id": tool_call.get("id"),
-                            "name": tool_name,
-                            "content": json.dumps(result),
-                            "metadata": {"file_path": file_path},
-                        }
-                    )
+                        tool_task = asyncio.create_task(
+                            self.tool_registry.execute(
+                                tool_name,
+                                tool_args,
+                                sandbox_adapter=sandbox_adapter,
+                                sandbox_context=session.sandbox_context,
+                                provider=provider,
+                                model=request.model,
+                                api_key=request.api_key,
+                                base_url=request.base_url,
+                                chat_id=request.chat_id,
+                                session_store=self.session_store,
+                                agent=self,
+                                subagent_event_queue=subagent_event_queue,
+                            )
+                        )
 
-                    yield await send(
-                        "tool_result",
-                        {
-                            "name": tool_name,
-                            "file_path": file_path,
-                            "ok": result.get("ok", False),
-                            "result": result,
-                        },
-                    )
-                continue
+                        while True:
+                            get_event_task = asyncio.create_task(subagent_event_queue.get())
+                            done, _ = await asyncio.wait(
+                                [tool_task, get_event_task],
+                                return_when=asyncio.FIRST_COMPLETED,
+                            )
 
-            final_message = "".join(assistant_content_parts)
-            session.messages.append({"role": "assistant", "content": final_message})
-            yield await send(
-                "message_complete",
-                {
-                    "content": "".join(visible_answer_parts),
-                    "iteration_count": iteration,
-                },
-            )
+                            if tool_task in done:
+                                if get_event_task in done:
+                                    event_type, event_data = get_event_task.result()
+                                    yield await send(event_type, event_data)
+                                else:
+                                    get_event_task.cancel()
+                                break
 
-            yield await send("done", {"ok": True})
-            return
+                            event_type, event_data = get_event_task.result()
+                            yield await send(event_type, event_data)
+
+                        try:
+                            result = tool_task.result()
+                        except Exception as exc:
+                            result = {"ok": False, "error": {"code": "tool_execution_failed", "message": str(exc)}}
+
+                        session.messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tool_call.get("id"),
+                                "name": tool_name,
+                                "content": json.dumps(result),
+                                "metadata": {"file_path": file_path},
+                            }
+                        )
+
+                        yield await send(
+                            "tool_result",
+                            {
+                                "name": tool_name,
+                                "file_path": file_path,
+                                "ok": result.get("ok", False),
+                                "result": result,
+                            },
+                        )
+                    continue
+
+                final_message = "".join(assistant_content_parts)
+                session.messages.append({"role": "assistant", "content": final_message})
+                yield await send(
+                    "message_complete",
+                    {
+                        "content": "".join(visible_answer_parts),
+                        "iteration_count": iteration,
+                    },
+                )
+
+                yield await send("done", {"ok": True})
+                return
+
+            except Exception as exc:
+                yield await send(
+                    "error",
+                    {
+                        "message": f"Agent loop error: {exc}",
+                        "code": "agent_loop_error",
+                    },
+                )
+                yield await send("done", {"ok": False})
+                return
 
         yield await send(
             "error",
@@ -228,6 +290,8 @@ class AgentRunner:
             return f"Terminal: {command or 'unknown'}"
         if tool_name == "list_files":
             return f"List: {list_path or 'unknown'}"
+        if tool_name == "call_sub_agent":
+            return f"Sub-agent: deepexplorer"
         prefix = "Create" if tool_name == "file_write" else "Read"
         return f"{prefix}: {file_path or 'unknown'}"
 

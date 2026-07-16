@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FolderOpen, Menu, Settings, Terminal } from 'lucide-react'
 
 import { Composer } from '@/components/chat/Composer'
+import { SubAgentOutput } from '@/components/chat/SubAgentOutput'
 import type { ChatRecord, ToolChip } from '@/types/chat'
 
 interface ChatWorkspaceProps {
@@ -220,6 +221,13 @@ export function ChatWorkspace({
                       </div>
                     ) : '')}
                   </div>
+                  {message.subAgentChips && message.subAgentChips.length > 0 ? (
+                    <div className="flex flex-wrap gap-[10px] mt-3">
+                      {message.subAgentChips.map((subAgent) => (
+                        <SubAgentOutput key={subAgent.id} chip={subAgent} />
+                      ))}
+                    </div>
+                  ) : null}
                   {message.toolChips && message.toolChips.length > 0 ? (
                     <div className="flex flex-wrap gap-[10px] mt-3">
                       {message.toolChips.map((tool) =>

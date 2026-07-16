@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from src.agents.agent import AgentRunner
@@ -11,16 +11,22 @@ def build_chat_router(agent_runner: AgentRunner, session_store: SessionStore) ->
 
     @router.post("/session", response_model=ChatSessionResponse)
     async def create_or_hydrate_session(request: ChatSessionCreateRequest) -> ChatSessionResponse:
-        session = session_store.upsert_history(request.chat_id, request.history)
-        return ChatSessionResponse(
-            chat_id=session.chat_id,
-            message_count=len(session.messages),
-            has_sandbox=session.sandbox_context is not None,
-        )
+        try:
+            session = session_store.upsert_history(request.chat_id, request.history)
+            return ChatSessionResponse(
+                chat_id=session.chat_id,
+                message_count=len(session.messages),
+                has_sandbox=session.sandbox_context is not None,
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Session error: {exc}") from exc
 
     @router.post("/stream")
     async def stream_chat(request: ChatStreamRequest) -> StreamingResponse:
-        generator = agent_runner.stream_turn(request)
-        return StreamingResponse(generator, media_type="text/event-stream")
+        try:
+            generator = agent_runner.stream_turn(request)
+            return StreamingResponse(generator, media_type="text/event-stream")
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Stream start failed: {exc}") from exc
 
     return router

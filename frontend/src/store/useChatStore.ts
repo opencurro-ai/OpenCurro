@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-import type { BackendMessage, ChatRecord, SandboxInfo, ToolChip, UiMessage } from '@/types/chat'
+import type { BackendMessage, ChatRecord, SandboxInfo, SubAgentChip, ToolChip, UiMessage } from '@/types/chat'
 import { createId } from '@/utils/id'
 
 function createEmptyChat(): ChatRecord {
@@ -39,6 +39,11 @@ interface ChatState {
   markAssistantError: (chatId: string, message: string) => void
   addToolChip: (chatId: string, tool: ToolChip) => void
   updateLastToolChip: (chatId: string, updates: Partial<ToolChip>) => void
+  addSubAgentChip: (chatId: string, subAgent: SubAgentChip) => void
+  appendSubAgentToken: (chatId: string, session: string, token: string) => void
+  addSubAgentToolChip: (chatId: string, session: string, tool: ToolChip) => void
+  updateLastSubAgentToolChip: (chatId: string, session: string, updates: Partial<ToolChip>) => void
+  updateSubAgentStatus: (chatId: string, session: string, status: SubAgentChip['status'], errorMessage?: string) => void
   setSandboxInfo: (chatId: string, sandbox: SandboxInfo) => void
   replaceModelHistory: (chatId: string, history: BackendMessage[]) => void
   addEvent: (chatId: string, event: Record<string, unknown>) => void
@@ -93,7 +98,7 @@ export const useChatStore = create<ChatState>()(
                 ...chat,
                 messages: [
                   ...chat.messages,
-                  { id: messageId, role: 'assistant', content: '', createdAt: new Date().toISOString(), status: 'streaming', toolChips: [] },
+                  { id: messageId, role: 'assistant', content: '', createdAt: new Date().toISOString(), status: 'streaming', toolChips: [], subAgentChips: [] },
                 ],
               }
             : chat),
@@ -108,6 +113,97 @@ export const useChatStore = create<ChatState>()(
                 ? { ...message, content: `${message.content}${token}` }
                 : message),
               updatedAt: new Date().toISOString(),
+            }
+          : chat),
+      })),
+      addSubAgentChip: (chatId, subAgent) => set((state) => ({
+        chats: state.chats.map((chat) => chat.id === chatId
+          ? {
+              ...chat,
+              messages: chat.messages.map((message, index) => index === chat.messages.length - 1 && message.role === 'assistant'
+                ? { ...message, subAgentChips: [...(message.subAgentChips ?? []), subAgent] }
+                : message),
+            }
+          : chat),
+      })),
+      appendSubAgentToken: (chatId, session, token) => set((state) => ({
+        chats: state.chats.map((chat) => chat.id === chatId
+          ? {
+              ...chat,
+              messages: chat.messages.map((message) =>
+                message.role === 'assistant'
+                  ? {
+                      ...message,
+                      subAgentChips: (message.subAgentChips ?? []).map((chip) =>
+                        chip.session === session
+                          ? { ...chip, output: chip.output + token }
+                          : chip
+                      ),
+                    }
+                  : message
+              ),
+            }
+          : chat),
+      })),
+      addSubAgentToolChip: (chatId, session, tool) => set((state) => ({
+        chats: state.chats.map((chat) => chat.id === chatId
+          ? {
+              ...chat,
+              messages: chat.messages.map((message) =>
+                message.role === 'assistant'
+                  ? {
+                      ...message,
+                      subAgentChips: (message.subAgentChips ?? []).map((chip) =>
+                        chip.session === session
+                          ? { ...chip, toolChips: [...chip.toolChips, tool] }
+                          : chip
+                      ),
+                    }
+                  : message
+              ),
+            }
+          : chat),
+      })),
+      updateLastSubAgentToolChip: (chatId, session, updates) => set((state) => ({
+        chats: state.chats.map((chat) => chat.id === chatId
+          ? {
+              ...chat,
+              messages: chat.messages.map((message) =>
+                message.role === 'assistant'
+                  ? {
+                      ...message,
+                      subAgentChips: (message.subAgentChips ?? []).map((chip) =>
+                        chip.session === session
+                          ? {
+                              ...chip,
+                              toolChips: chip.toolChips.map((tc, i) =>
+                                i === chip.toolChips.length - 1 ? { ...tc, ...updates } : tc
+                              ),
+                            }
+                          : chip
+                      ),
+                    }
+                  : message
+              ),
+            }
+          : chat),
+      })),
+      updateSubAgentStatus: (chatId, session, status, errorMessage) => set((state) => ({
+        chats: state.chats.map((chat) => chat.id === chatId
+          ? {
+              ...chat,
+              messages: chat.messages.map((message) =>
+                message.role === 'assistant'
+                  ? {
+                      ...message,
+                      subAgentChips: (message.subAgentChips ?? []).map((chip) =>
+                        chip.session === session
+                          ? { ...chip, status, ...(errorMessage ? { errorMessage } : {}) }
+                          : chip
+                      ),
+                    }
+                  : message
+              ),
             }
           : chat),
       })),
