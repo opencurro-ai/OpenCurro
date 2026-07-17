@@ -83,6 +83,7 @@ class NovitaSandboxAdapter(SandboxAdapter):
                 handle = await context.client.commands.run(cmd=command, background=True, timeout=timeout)
                 return {
                     "pid": handle.pid,
+                    "_handle": handle,
                     "status": "started",
                     "message": f"Command started with PID {handle.pid}",
                 }

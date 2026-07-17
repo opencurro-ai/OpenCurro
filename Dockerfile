@@ -23,7 +23,7 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # Production image - Python backend serving static frontend
-FROM python:3.11-slim AS runner
+FROM python:3.14-slim AS runner
 
 WORKDIR /app
 

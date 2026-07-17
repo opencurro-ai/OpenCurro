@@ -8,6 +8,7 @@ from src.agents.tools.file_read import FILE_READ_TOOL_SCHEMA, execute_file_read
 from src.agents.tools.file_write import FILE_WRITE_TOOL_SCHEMA, execute_file_write
 from src.agents.tools.list_files import LIST_FILES_TOOL_SCHEMA, execute_list_files
 from src.agents.tools.shall_tool import SHALL_TOOL_SCHEMA, execute_shall_tool
+from src.agents.tools.shell_view import SHELL_VIEW_TOOL_SCHEMA, execute_shell_view
 
 
 class ToolRegistry:
@@ -18,6 +19,7 @@ class ToolRegistry:
             SHALL_TOOL_SCHEMA,
             LIST_FILES_TOOL_SCHEMA,
             CALL_SUB_AGENT_TOOL_SCHEMA,
+            SHELL_VIEW_TOOL_SCHEMA,
         ]
         self._handlers = {
             "file_write": execute_file_write,
@@ -25,6 +27,7 @@ class ToolRegistry:
             "shall_tool": execute_shall_tool,
             "list_files": execute_list_files,
             "call_sub_agent": execute_call_sub_agent,
+            "shell_view": execute_shell_view,
         }
 
     @property

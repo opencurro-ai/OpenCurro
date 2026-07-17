@@ -130,6 +130,7 @@ class AgentRunner:
                         file_path = tool_payload.get("file_path")
                         command = tool_payload.get("command")
                         session_name = tool_payload.get("session_name") or tool_payload.get("session") or "default"
+                        session_names = tool_payload.get("session_names")
                         list_path = tool_payload.get("path")
                         yield await send(
                             "tool_call",
@@ -138,8 +139,9 @@ class AgentRunner:
                                 "file_path": file_path,
                                 "command": command,
                                 "session_name": session_name,
+                                "session_names": session_names,
                                 "path": list_path,
-                                "label": self._tool_label(tool_name, file_path, command, list_path),
+                                "label": self._tool_label(tool_name, file_path, command, list_path, session_names),
                             },
                         )
 
@@ -285,9 +287,12 @@ class AgentRunner:
             except json.JSONDecodeError:
                 return {}
 
-    def _tool_label(self, tool_name: str, file_path: Optional[str], command: Optional[str] = None, list_path: Optional[str] = None) -> str:
+    def _tool_label(self, tool_name: str, file_path: Optional[str], command: Optional[str] = None, list_path: Optional[str] = None, session_names: Optional[list[str]] = None) -> str:
         if tool_name == "shall_tool":
             return f"Terminal: {command or 'unknown'}"
+        if tool_name == "shell_view":
+            sessions = ", ".join(session_names) if session_names else "unknown"
+            return f"Shell View: {sessions}"
         if tool_name == "list_files":
             return f"List: {list_path or 'unknown'}"
         if tool_name == "call_sub_agent":

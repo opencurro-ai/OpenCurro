@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import PurePosixPath
 from typing import Protocol, Optional, Any
@@ -17,6 +17,7 @@ class SandboxContext:
     timeout_seconds: int
     template_id: Optional[str]
     client: Any
+    background_handles: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 class SandboxAdapter(Protocol):

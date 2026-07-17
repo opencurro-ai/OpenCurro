@@ -51,6 +51,16 @@ async def execute_shall_tool(*, sandbox_adapter, sandbox_context, arguments: dic
             timeout=180,
             wait_for_output=wait_for_output,
         )
+
+        if not wait_for_output:
+            handle = result.pop("_handle", None)
+            if handle:
+                sandbox_context.background_handles[session_name] = {
+                    "pid": handle.pid,
+                    "command": command,
+                    "handle": handle,
+                }
+
         return ToolExecutionResult(ok=True, data=result)
     except Exception as exc:
         return ToolExecutionResult(

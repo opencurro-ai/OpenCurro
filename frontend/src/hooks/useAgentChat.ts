@@ -98,6 +98,8 @@ export function useAgentChat() {
             setStatusLabel('Thinking...')
           }
           if (event === 'tool_call') {
+            const dataSessionNames = data.session_names
+            const sessionNames = Array.isArray(dataSessionNames) ? dataSessionNames.filter((s: unknown): s is string => typeof s === 'string') : undefined
             addToolChip(chatId, {
               id: createId('tool'),
               name: typeof data.name === 'string' ? data.name : 'tool',
@@ -105,6 +107,7 @@ export function useAgentChat() {
               filePath: typeof data.file_path === 'string' ? data.file_path : undefined,
               command: typeof data.command === 'string' ? data.command : undefined,
               sessionName: typeof data.session_name === 'string' && data.session_name ? data.session_name : 'default',
+              sessionNames,
               path: typeof data.path === 'string' ? data.path : undefined,
             })
           }

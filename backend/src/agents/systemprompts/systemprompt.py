@@ -21,6 +21,7 @@ Command tool policy:
 - The sandbox session persists between commands; state (files, env) carries over.
 - When wait_for_output is True (default), the tool returns stdout, stderr, and exit_code.
 - For long-running processes, set wait_for_output to False to start them in the background.
+- Use shell_view to check the output of background commands by providing their session_name(s).
 - Prefer running multiple independent commands in a single shell command joined with && when possible.
 
 Output policy:

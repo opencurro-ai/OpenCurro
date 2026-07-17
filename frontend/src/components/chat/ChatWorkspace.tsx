@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FolderOpen, Menu, Settings, Terminal } from 'lucide-react'
+import { Eye, FolderOpen, Menu, Settings, Terminal } from 'lucide-react'
 
 import { Composer } from '@/components/chat/Composer'
 import { SubAgentOutput } from '@/components/chat/SubAgentOutput'
@@ -135,6 +135,61 @@ function ListFilesOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: b
   )
 }
 
+function ShellViewOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: boolean; onToggle: () => void }) {
+  const resultData = chip.resultData
+  const data = (resultData?.data as Record<string, unknown> | undefined) ?? resultData
+  const sessions = data?.sessions as Array<{ session_name: string; status: string; output: string }> | undefined
+  const isRunning = chip.ok === undefined
+  const hasRunning = sessions?.some((s) => s.status === 'running') ?? false
+
+  const statusLabel = isRunning || hasRunning ? 'running...' : 'done'
+
+  return (
+    <div className="overflow-hidden rounded-[18px] border border-border bg-white shadow-sm">
+      <button
+        onClick={onToggle}
+        className={`flex w-full items-center gap-2 px-4 py-3 text-left text-xs transition-colors hover:bg-[rgba(55,53,47,0.04)] ${chip.ok === false ? 'text-[#ef4444]' : 'text-[#34322d]'}`}
+      >
+        <Eye className="size-[14px] shrink-0 text-[#858481]" />
+        <span className="flex-1 truncate text-[13px]">
+          {chip.label}
+        </span>
+        <span className={`shrink-0 text-[11px] ${(isRunning || hasRunning) ? 'animate-pulse text-[#858481]' : 'text-[#22c55e]'}`}>
+          {statusLabel}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="border-t border-border p-4 font-mono text-[13px] leading-relaxed bg-[#f5f5f5]">
+          {sessions && sessions.length > 0 ? (
+            <div className="space-y-4">
+              {sessions.map((session) => (
+                <div key={session.session_name}>
+                  <div className="mb-1 flex items-center gap-2 text-[11px] text-[#858481]">
+                    <Eye className="size-3" />
+                    <span className="font-semibold">{session.session_name}</span>
+                    <span className={`ml-auto ${session.status === 'running' ? 'text-[#f97316]' : 'text-[#22c55e]'}`}>
+                      {session.status}
+                    </span>
+                  </div>
+                  {session.output ? (
+                    <pre className="whitespace-pre-wrap text-[#34322d] bg-white rounded-lg p-3 border border-border text-[12px]">{session.output}</pre>
+                  ) : (
+                    <div className="text-[#858481] text-[12px]">No output yet</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : chip.ok === false ? (
+            <div className="text-[#ef4444]">Failed to view shell output</div>
+          ) : (
+            <div className="text-[#858481]">Awaiting output...</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ChatWorkspace({
   chat,
   disabled,
@@ -234,6 +289,10 @@ export function ChatWorkspace({
                         tool.name === 'shall_tool' ? (
                           <div key={tool.id} className="w-full max-w-xl">
                             <TerminalOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
+                          </div>
+                        ) : tool.name === 'shell_view' ? (
+                          <div key={tool.id} className="w-full max-w-xl">
+                            <ShellViewOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
                           </div>
                         ) : tool.name === 'list_files' ? (
                           <div key={tool.id} className="w-full max-w-xl">
