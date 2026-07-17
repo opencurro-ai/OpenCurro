@@ -18,6 +18,8 @@ export interface StreamChatPayload {
     timeout_seconds: number
   }
   max_iterations: number
+  tavily_api_key?: string
+  firecrawl_api_key?: string
 }
 
 export async function fetchProviders(): Promise<ProviderMetadata[]> {

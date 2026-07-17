@@ -132,6 +132,8 @@ class AgentRunner:
                         session_name = tool_payload.get("session_name") or tool_payload.get("session") or "default"
                         session_names = tool_payload.get("session_names")
                         list_path = tool_payload.get("path")
+                        query = tool_payload.get("query")
+                        url = tool_payload.get("url")
                         yield await send(
                             "tool_call",
                             {
@@ -141,7 +143,9 @@ class AgentRunner:
                                 "session_name": session_name,
                                 "session_names": session_names,
                                 "path": list_path,
-                                "label": self._tool_label(tool_name, file_path, command, list_path, session_names),
+                                "query": query,
+                                "url": url,
+                                "label": self._tool_label(tool_name, file_path, command, list_path, session_names, url=url),
                             },
                         )
 
@@ -161,6 +165,8 @@ class AgentRunner:
                                 session_store=self.session_store,
                                 agent=self,
                                 subagent_event_queue=subagent_event_queue,
+                                tavily_api_key=request.tavily_api_key,
+                                firecrawl_api_key=request.firecrawl_api_key,
                             )
                         )
 
@@ -287,7 +293,7 @@ class AgentRunner:
             except json.JSONDecodeError:
                 return {}
 
-    def _tool_label(self, tool_name: str, file_path: Optional[str], command: Optional[str] = None, list_path: Optional[str] = None, session_names: Optional[list[str]] = None) -> str:
+    def _tool_label(self, tool_name: str, file_path: Optional[str], command: Optional[str] = None, list_path: Optional[str] = None, session_names: Optional[list[str]] = None, url: Optional[str] = None) -> str:
         if tool_name == "shall_tool":
             return f"Terminal: {command or 'unknown'}"
         if tool_name == "shell_view":
@@ -297,6 +303,10 @@ class AgentRunner:
             return f"List: {list_path or 'unknown'}"
         if tool_name == "call_sub_agent":
             return f"Sub-agent: deepexplorer"
+        if tool_name == "web_search":
+            return f"Web Search"
+        if tool_name == "fatch_web_urls":
+            return f"Fetch: {url or 'url'}"
         prefix = "Create" if tool_name == "file_write" else "Read"
         return f"{prefix}: {file_path or 'unknown'}"
 

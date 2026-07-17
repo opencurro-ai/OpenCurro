@@ -16,12 +16,16 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     modelsByProvider,
     novitaApiKey,
     novitaTemplateId,
+    tavilyApiKey,
+    firecrawlApiKey,
     providerBaseUrls,
     providerKeys,
     selectedModel,
     selectedProvider,
     setNovitaApiKey,
     setNovitaTemplateId,
+    setTavilyApiKey,
+    setFirecrawlApiKey,
     setProviderBaseUrl,
     setProviderKey,
     setSelectedModel,
@@ -116,6 +120,29 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
             />
             <p className="text-xs leading-relaxed text-[#858481]">
               Sandbox creation is automatic on the first message. Timeout is set to one hour with resume-friendly lifecycle handling.
+            </p>
+          </div>
+        </div>
+
+        <div className="field-group mb-[18px]">
+          <label className="field-label flex items-center gap-2 text-sm font-semibold text-[#34322d] mb-[10px]">
+            Web Tools
+          </label>
+          <div className="space-y-3">
+            <input
+              value={tavilyApiKey}
+              onChange={(event) => setTavilyApiKey(event.target.value)}
+              placeholder="Tavily API key (web search)"
+              className="w-full rounded-[14px] border border-border bg-white px-4 py-3 text-sm text-[#34322d] outline-none placeholder:text-[#858481] focus:border-[#ffc700]"
+            />
+            <input
+              value={firecrawlApiKey}
+              onChange={(event) => setFirecrawlApiKey(event.target.value)}
+              placeholder="Firecrawl API key (web fetch)"
+              className="w-full rounded-[14px] border border-border bg-white px-4 py-3 text-sm text-[#34322d] outline-none placeholder:text-[#858481] focus:border-[#ffc700]"
+            />
+            <p className="text-xs leading-relaxed text-[#858481]">
+              These keys enable the agent to search the web and fetch page content. Optional — leave blank to skip web features.
             </p>
           </div>
         </div>

@@ -11,6 +11,8 @@ interface SettingsState {
   selectedModel: string
   novitaApiKey: string
   novitaTemplateId: string
+  tavilyApiKey: string
+  firecrawlApiKey: string
   providerCatalog: ProviderMetadata[]
   modelsByProvider: Record<ProviderId, ProviderModel[]>
   setProviderKey: (provider: ProviderId, value: string) => void
@@ -19,6 +21,8 @@ interface SettingsState {
   setSelectedModel: (model: string) => void
   setNovitaApiKey: (value: string) => void
   setNovitaTemplateId: (value: string) => void
+  setTavilyApiKey: (value: string) => void
+  setFirecrawlApiKey: (value: string) => void
   setProviderCatalog: (providers: ProviderMetadata[]) => void
   setModelsForProvider: (provider: ProviderId, models: ProviderModel[]) => void
 }
@@ -36,6 +40,8 @@ export const useSettingsStore = create<SettingsState>()(
       selectedModel: '',
       novitaApiKey: '',
       novitaTemplateId: '',
+      tavilyApiKey: '',
+      firecrawlApiKey: '',
       providerCatalog: [],
       modelsByProvider: { openrouter: [], groq: [], nvidia: [] },
       setProviderKey: (provider, value) => set((state) => ({ providerKeys: { ...state.providerKeys, [provider]: value } })),
@@ -44,6 +50,8 @@ export const useSettingsStore = create<SettingsState>()(
       setSelectedModel: (model) => set({ selectedModel: model }),
       setNovitaApiKey: (value) => set({ novitaApiKey: value }),
       setNovitaTemplateId: (value) => set({ novitaTemplateId: value }),
+      setTavilyApiKey: (value) => set({ tavilyApiKey: value }),
+      setFirecrawlApiKey: (value) => set({ firecrawlApiKey: value }),
       setProviderCatalog: (providerCatalog) => set({ providerCatalog }),
       setModelsForProvider: (provider, models) => set((state) => ({ modelsByProvider: { ...state.modelsByProvider, [provider]: models } })),
     }),
@@ -56,6 +64,8 @@ export const useSettingsStore = create<SettingsState>()(
         selectedModel: state.selectedModel,
         novitaApiKey: state.novitaApiKey,
         novitaTemplateId: state.novitaTemplateId,
+        tavilyApiKey: state.tavilyApiKey,
+        firecrawlApiKey: state.firecrawlApiKey,
         modelsByProvider: state.modelsByProvider,
       }),
     },

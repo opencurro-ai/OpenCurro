@@ -27,7 +27,7 @@ export function useAgentChat() {
     setStreaming,
     startAssistantMessage,
   } = useChatStore()
-  const { providerKeys, providerBaseUrls, selectedModel, selectedProvider, novitaApiKey, novitaTemplateId } = useSettingsStore()
+  const { providerKeys, providerBaseUrls, selectedModel, selectedProvider, novitaApiKey, novitaTemplateId, tavilyApiKey, firecrawlApiKey } = useSettingsStore()
 
   const sendMessage = useCallback(async (content: string) => {
     const chatId = activeChatId || chats[0]?.id
@@ -78,6 +78,8 @@ export function useAgentChat() {
             timeout_seconds: 3600,
           },
           max_iterations: 1000,
+          tavily_api_key: tavilyApiKey || undefined,
+          firecrawl_api_key: firecrawlApiKey || undefined,
         },
         (event, data) => {
           addEvent(chatId, { type: event, data })
@@ -109,6 +111,8 @@ export function useAgentChat() {
               sessionName: typeof data.session_name === 'string' && data.session_name ? data.session_name : 'default',
               sessionNames,
               path: typeof data.path === 'string' ? data.path : undefined,
+              query: typeof data.query === 'string' ? data.query : undefined,
+              url: typeof data.url === 'string' ? data.url : undefined,
             })
           }
           if (event === 'tool_result') {
@@ -204,6 +208,8 @@ export function useAgentChat() {
     updateLastToolChip,
     novitaApiKey,
     novitaTemplateId,
+    tavilyApiKey,
+    firecrawlApiKey,
     providerBaseUrls,
     providerKeys,
     selectedModel,

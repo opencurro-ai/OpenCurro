@@ -7,3 +7,5 @@ pytest
 pytest-asyncio
 httpx
 novita-sandbox
+tavily-python
+firecrawl-py

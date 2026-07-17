@@ -135,6 +135,92 @@ function ListFilesOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: b
   )
 }
 
+function WebSearchOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: boolean; onToggle: () => void }) {
+  const resultData = chip.resultData
+  const data = (resultData?.data as Record<string, unknown> | undefined) ?? resultData
+  const results = data?.results as Array<{ title: string; url: string; Description: string }> | undefined
+  const isRunning = chip.ok === undefined
+
+  const statusLabel = isRunning ? 'running...' : chip.ok ? 'done' : 'error'
+
+  return (
+    <div className="overflow-hidden rounded-[18px] border border-border bg-white shadow-sm">
+      <button
+        onClick={onToggle}
+        className={`flex w-full items-center gap-2 px-4 py-3 text-left text-xs transition-colors hover:bg-[rgba(55,53,47,0.04)] ${chip.ok === false ? 'text-[#ef4444]' : 'text-[#34322d]'}`}
+      >
+        <svg viewBox="0 0 24 24" className="size-[14px] shrink-0 text-[#858481]" strokeWidth={1.8}>
+          <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        <span className="flex-1 truncate text-[13px]">
+          {chip.label}
+          {chip.query ? <span className="ml-2 text-[11px] text-[#858481]">"{chip.query}"</span> : null}
+        </span>
+        <span className={`shrink-0 text-[11px] ${isRunning ? 'animate-pulse text-[#858481]' : chip.ok ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+          {statusLabel}
+        </span>
+        {results && results.length > 0 ? <span className="shrink-0 text-[10px] text-[#858481] ml-2">{results.length} results</span> : null}
+      </button>
+      {isOpen && results && results.length > 0 ? (
+        <div className="border-t border-border p-3 space-y-2 bg-[#f5f5f5]">
+          {results.map((r, i) => (
+            <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" className="block rounded-[12px] bg-white border border-border p-3 hover:shadow-sm transition-shadow">
+              <div className="text-[13px] font-semibold text-[#34322d] mb-1">{r.title}</div>
+              <div className="text-[11px] text-[#858481] mb-1 line-clamp-2">{r.Description}</div>
+              <div className="text-[10px] text-[#3b82f6] truncate">{r.url}</div>
+            </a>
+          ))}
+        </div>
+      ) : isOpen && chip.ok === false ? (
+        <div className="border-t border-border p-4 text-[#ef4444] text-[13px] bg-[#f5f5f5]">Search failed</div>
+      ) : null}
+    </div>
+  )
+}
+
+function FetchWebOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: boolean; onToggle: () => void }) {
+  const resultData = chip.resultData
+  const data = (resultData?.data as Record<string, unknown> | undefined) ?? resultData
+  const content = data?.content as string | undefined
+  const url = data?.url as string | undefined
+  const isRunning = chip.ok === undefined
+
+  const statusLabel = isRunning ? 'running...' : chip.ok ? 'done' : 'error'
+  const displayContent = content ? (content.length > 4000 ? content.slice(0, 4000) + '...' : content) : ''
+
+  return (
+    <div className="overflow-hidden rounded-[18px] border border-border bg-white shadow-sm">
+      <button
+        onClick={onToggle}
+        className={`flex w-full items-center gap-2 px-4 py-3 text-left text-xs transition-colors hover:bg-[rgba(55,53,47,0.04)] ${chip.ok === false ? 'text-[#ef4444]' : 'text-[#34322d]'}`}
+      >
+        <svg viewBox="0 0 24 24" className="size-[14px] shrink-0 text-[#858481]" strokeWidth={1.8}>
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        <span className="flex-1 truncate text-[13px]">
+          {chip.label}
+          {url ? <span className="ml-2 text-[11px] text-[#858481] font-mono truncate">{url}</span> : null}
+        </span>
+        <span className={`shrink-0 text-[11px] ${isRunning ? 'animate-pulse text-[#858481]' : chip.ok ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+          {statusLabel}
+        </span>
+      </button>
+      {isOpen && displayContent ? (
+        <div className="border-t border-border p-4 font-mono text-[12px] leading-relaxed bg-[#f5f5f5] max-h-[400px] overflow-auto">
+          <div className="flex items-center gap-2 mb-3 text-[10px] uppercase tracking-wider text-[#858481]">
+            <svg viewBox="0 0 24 24" className="size-3" strokeWidth={1.8}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span>Fetched content</span>
+            {url ? <a href={url} target="_blank" rel="noopener noreferrer" className="ml-auto text-[#3b82f6] underline truncate max-w-[200px]">{url}</a> : null}
+          </div>
+          <pre className="whitespace-pre-wrap text-[#34322d]">{displayContent}</pre>
+        </div>
+      ) : isOpen && chip.ok === false ? (
+        <div className="border-t border-border p-4 text-[#ef4444] text-[13px] bg-[#f5f5f5]">Fetch failed</div>
+      ) : null}
+    </div>
+  )
+}
+
 function ShellViewOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: boolean; onToggle: () => void }) {
   const resultData = chip.resultData
   const data = (resultData?.data as Record<string, unknown> | undefined) ?? resultData
@@ -283,7 +369,7 @@ export function ChatWorkspace({
                       ))}
                     </div>
                   ) : null}
-                  {message.toolChips && message.toolChips.length > 0 ? (
+                      {message.toolChips && message.toolChips.length > 0 ? (
                     <div className="flex flex-wrap gap-[10px] mt-3">
                       {message.toolChips.map((tool) =>
                         tool.name === 'shall_tool' ? (
@@ -297,6 +383,14 @@ export function ChatWorkspace({
                         ) : tool.name === 'list_files' ? (
                           <div key={tool.id} className="w-full max-w-xl">
                             <ListFilesOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
+                          </div>
+                        ) : tool.name === 'web_search' ? (
+                          <div key={tool.id} className="w-full max-w-xl">
+                            <WebSearchOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
+                          </div>
+                        ) : tool.name === 'fatch_web_urls' ? (
+                          <div key={tool.id} className="w-full max-w-xl">
+                            <FetchWebOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
                           </div>
                         ) : (
                           <span key={tool.id} className={`inline-flex items-center gap-2 px-3 py-[6px] rounded-full bg-white border border-border text-xs text-[#34322d] shadow-sm ${tool.ok === false ? 'border-red-300 bg-red-50 text-red-600' : ''}`}>

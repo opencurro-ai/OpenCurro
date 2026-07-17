@@ -11,6 +11,8 @@ export interface ToolChip {
   sessionName?: string
   sessionNames?: string[]
   path?: string
+  query?: string
+  url?: string
   ok?: boolean
   resultData?: Record<string, unknown>
 }

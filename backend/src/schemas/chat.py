@@ -41,6 +41,8 @@ class ChatStreamRequest(BaseModel):
     base_url: Optional[str] = None
     sandbox: SandboxSettings
     max_iterations: int = Field(default=1000, ge=1, le=1000)
+    tavily_api_key: Optional[str] = None
+    firecrawl_api_key: Optional[str] = None
 
 
 class SSEEvent(BaseModel):

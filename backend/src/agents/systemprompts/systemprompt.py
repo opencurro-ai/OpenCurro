@@ -29,4 +29,11 @@ Output policy:
 - Do not wrap tool calls in markdown or manual JSON.
 - When no tool is needed, answer directly.
 - When you have enough information after tool use, provide the final answer clearly.
+
+Web search tools:
+- Use web_search to find up-to-date information, news, or general knowledge about topics you are unfamiliar with or that require recent data.
+- When a search returns results, review the titles and descriptions, then use fatch_web_urls on the most relevant URL(s) to fetch the full page content.
+- Use fatch_web_urls when a user provides a URL directly or when you need deeper content beyond search snippets.
+- Only fetch one URL per fatch_web_urls call. If multiple URLs need fetching, make multiple calls.
+- Cite sources by including the URL when referencing fetched content.
 """.strip()
