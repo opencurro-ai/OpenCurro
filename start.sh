@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-BACKEND_DIR="$(dirname "$0")/backend"
-FRONTEND_DIR="$(dirname "$0")/frontend"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BACKEND_DIR="$SCRIPT_DIR/backend"
+FRONTEND_DIR="$SCRIPT_DIR/frontend"
 
 cleanup() {
   echo ""
