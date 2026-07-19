@@ -4,7 +4,7 @@
 
 <div>
   <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" alt="React 19" />
-  <img src="https://img.shields.io/badge/FastAPI-Python_3.14-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/FastAPI-Python_3.12-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
   <img src="https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS v4" />
   <img src="https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white" alt="Vite 7" />
   <img src="https://img.shields.io/badge/Zustand-5-amber?logo=react&logoColor=white" alt="Zustand 5" />
@@ -59,7 +59,7 @@ graph TB
         SSE[SSE Stream Client]
     end
 
-    subgraph Backend["FastAPI + Python 3.14"]
+    subgraph Backend["FastAPI + Python 3.12"]
         API[FastAPI Router]
         AR[AgentRunner<br/>Async Loop]
         PR[Provider Registry<br/>OpenAI-Compatible]
@@ -103,7 +103,7 @@ User Message → Composer → SSE POST /api/chat/stream
 ### Prerequisites
 
 - **Node.js** 20+ (or **Bun**)
-- **Python** 3.14+
+- **Python** 3.12+
 - **Novita API Key** from [Novita AI](https://novita.ai)
 - **OpenRouter / Groq / NVIDIA NIM API Key**
 
@@ -117,11 +117,11 @@ pip install -r requirements.txt
 uvicorn src.main:app --reload --port 8000
 ```
 
-Or with `uv` (recommended for Python 3.14+):
+Or with `uv` (recommended for Python 3.12+):
 
 ```bash
 cd backend
-uv venv .venv --python 3.14
+uv venv .venv --python 3.12
 source .venv/bin/activate
 uv pip install -r requirements.txt
 uvicorn src.main:app --reload --port 8000

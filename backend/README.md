@@ -3,7 +3,7 @@
 # ⚙️ OpenCurro Backend
 
 <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" />
-<img src="https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white" />
+<img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" />
 <img src="https://img.shields.io/badge/uvicorn-0.34-1BB91F?logo=gunicorn&logoColor=white" />
 <img src="https://img.shields.io/badge/httpx-0.28-1BB91F" />
 <img src="https://img.shields.io/badge/pydantic-2-306998" />
