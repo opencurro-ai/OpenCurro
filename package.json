@@ -1,7 +1,0 @@
-{
-  "name": "novita-agent-studio-workspace",
-  "private": true,
-  "scripts": {
-    "build:local": "cd frontend && bun run build:local"
-  }
-}
