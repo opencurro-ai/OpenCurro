@@ -276,6 +276,69 @@ function ShellViewOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: b
   )
 }
 
+function StrReplaceOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: boolean; onToggle: () => void }) {
+  const resultData = chip.resultData
+  const data = (resultData?.data as Record<string, unknown> | undefined) ?? resultData
+  const oldString = chip.oldString ?? (data?.old_string as string | undefined)
+  const newString = chip.newString ?? (data?.new_string as string | undefined)
+  const occurrences = data?.occurrences as number | undefined
+  const isRunning = chip.ok === undefined
+
+  const statusLabel = isRunning ? 'running...' : chip.ok ? 'done' : 'error'
+
+  return (
+    <div className="overflow-hidden rounded-[18px] border border-border bg-white shadow-sm">
+      <button
+        onClick={onToggle}
+        className={`flex w-full items-center gap-2 px-4 py-3 text-left text-xs transition-colors hover:bg-[rgba(55,53,47,0.04)] ${chip.ok === false ? 'text-[#ef4444]' : 'text-[#34322d]'}`}
+      >
+        <svg viewBox="0 0 24 24" className="size-[14px] shrink-0 text-[#858481]" strokeWidth={1.8} fill="none" stroke="currentColor">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        <span className="flex-1 truncate text-[13px]">
+          {chip.label}
+        </span>
+        <span className={`shrink-0 text-[11px] ${isRunning ? 'animate-pulse text-[#858481]' : chip.ok ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+          {statusLabel}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="border-t border-border p-4 font-mono text-[13px] leading-relaxed bg-[#f5f5f5] space-y-3">
+          <div>
+            <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-wider text-[#858481]">
+              <svg viewBox="0 0 24 24" className="size-3" strokeWidth={1.8} fill="none" stroke="currentColor">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              <span>Old string</span>
+            </div>
+            <pre className="whitespace-pre-wrap text-[#dc2626] bg-white rounded-lg p-3 border border-border text-[12px] max-h-[200px] overflow-auto">{oldString ?? ''}</pre>
+          </div>
+          <div>
+            <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-wider text-[#858481]">
+              <svg viewBox="0 0 24 24" className="size-3" strokeWidth={1.8} fill="none" stroke="currentColor">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              <span>New string</span>
+            </div>
+            <pre className={`whitespace-pre-wrap bg-white rounded-lg p-3 border border-border text-[12px] max-h-[200px] overflow-auto ${newString ? 'text-[#059669]' : 'text-[#858481]'}`}>{newString || '(empty)'}</pre>
+          </div>
+          {occurrences !== undefined ? (
+            <div className="text-[11px] text-[#858481]">
+              {occurrences} occurrence{occurrences !== 1 ? 's' : ''} replaced
+            </div>
+          ) : null}
+          {chip.ok === false ? (
+            <div className="text-[#ef4444] text-[12px]">Edit failed</div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ChatWorkspace({
   chat,
   disabled,
@@ -391,6 +454,10 @@ export function ChatWorkspace({
                         ) : tool.name === 'fatch_web_urls' ? (
                           <div key={tool.id} className="w-full max-w-xl">
                             <FetchWebOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
+                          </div>
+                        ) : tool.name === 'str_replace' ? (
+                          <div key={tool.id} className="w-full max-w-xl">
+                            <StrReplaceOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
                           </div>
                         ) : (
                           <span key={tool.id} className={`inline-flex items-center gap-2 px-3 py-[6px] rounded-full bg-white border border-border text-xs text-[#34322d] shadow-sm ${tool.ok === false ? 'border-red-300 bg-red-50 text-red-600' : ''}`}>

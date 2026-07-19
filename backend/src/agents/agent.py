@@ -134,6 +134,8 @@ class AgentRunner:
                         list_path = tool_payload.get("path")
                         query = tool_payload.get("query")
                         url = tool_payload.get("url")
+                        old_string = tool_payload.get("old_string")
+                        new_string = tool_payload.get("new_string")
                         yield await send(
                             "tool_call",
                             {
@@ -145,6 +147,8 @@ class AgentRunner:
                                 "path": list_path,
                                 "query": query,
                                 "url": url,
+                                "old_string": old_string,
+                                "new_string": new_string,
                                 "label": self._tool_label(tool_name, file_path, command, list_path, session_names, url=url),
                             },
                         )
@@ -307,6 +311,8 @@ class AgentRunner:
             return f"Web Search"
         if tool_name == "fatch_web_urls":
             return f"Fetch: {url or 'url'}"
+        if tool_name == "str_replace":
+            return f"Edit: {file_path or 'unknown'}"
         prefix = "Create" if tool_name == "file_write" else "Read"
         return f"{prefix}: {file_path or 'unknown'}"
 

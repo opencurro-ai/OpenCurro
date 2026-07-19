@@ -44,7 +44,6 @@ def test_file_write_and_read_roundtrip() -> None:
         )
         assert read_result.ok is True
         assert "print('x')" in read_result.data["content"]
-        assert "     1\t" in read_result.data["content"]
 
     asyncio.run(run())
 

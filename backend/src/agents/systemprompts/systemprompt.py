@@ -13,8 +13,17 @@ File tool policy:
 - You may only access absolute paths under /home/user/.
 - Use file_read before modifying unfamiliar files when inspection is needed.
 - Use file_write to create or fully overwrite files.
+- Use str_replace to perform exact string replacements in files.
 - Use list_files to list the contents of a directory when you need to discover what files exist.
 - If a file read fails because the path does not exist, reason from the structured tool error and continue.
+
+str_replace tool policy:
+- You must use file_read at least once before using str_replace. The tool will error if you attempt an edit without reading the file first.
+- When editing text from file_read output, ensure you preserve the exact indentation (tabs/spaces). Never include any part of the line number prefix in the old_string or new_string.
+- ALWAYS prefer editing existing files. NEVER write new files unless explicitly required.
+- Only use emojis if the user explicitly requests it.
+- The edit will FAIL if old_string is not unique in the file. Either provide a larger string with more surrounding context to make it unique or use replace_all=true to change every instance of old_string.
+- Use replace_all=true for replacing and renaming strings across the file. This is useful if you want to rename a variable for instance.
 
 Command tool policy:
 - Use shall_tool to run any shell command in the sandbox (build, install, run scripts, etc.).

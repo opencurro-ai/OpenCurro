@@ -13,6 +13,8 @@ export interface ToolChip {
   path?: string
   query?: string
   url?: string
+  oldString?: string
+  newString?: string
   ok?: boolean
   resultData?: Record<string, unknown>
 }

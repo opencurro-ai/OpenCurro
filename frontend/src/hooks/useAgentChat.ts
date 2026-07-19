@@ -113,6 +113,8 @@ export function useAgentChat() {
               path: typeof data.path === 'string' ? data.path : undefined,
               query: typeof data.query === 'string' ? data.query : undefined,
               url: typeof data.url === 'string' ? data.url : undefined,
+              oldString: typeof data.old_string === 'string' ? data.old_string : undefined,
+              newString: typeof data.new_string === 'string' ? data.new_string : undefined,
             })
           }
           if (event === 'tool_result') {
