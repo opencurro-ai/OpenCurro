@@ -39,10 +39,10 @@
 
 ```mermaid
 graph TD
-    Client[React Frontend] -->|SSE POST| Stream[/api/chat/stream]
-    Client -->|REST| Session[/api/chat/session]
-    Client -->|REST| Providers[/api/providers]
-    Client -->|REST| Sandbox[/api/sandbox/files]
+    Client["React Frontend"] -->|SSE POST| Stream["/api/chat/stream"]
+    Client -->|REST| Session["/api/chat/session"]
+    Client -->|REST| Providers["/api/providers"]
+    Client -->|REST| Sandbox["/api/sandbox/files"]
 
     Stream --> AR[AgentRunner.stream_turn]
     AR --> SS[SessionStore<br/>In-Memory]
