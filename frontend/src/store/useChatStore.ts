@@ -35,7 +35,8 @@ interface ChatState {
   addUserMessage: (chatId: string, content: string) => void
   startAssistantMessage: (chatId: string) => string
   appendAssistantToken: (chatId: string, token: string) => void
-  finalizeAssistantMessage: (chatId: string, content: string) => void
+  appendAssistantReasoning: (chatId: string, token: string) => void
+  finalizeAssistantMessage: (chatId: string, content: string, reasoning?: string) => void
   markAssistantError: (chatId: string, message: string) => void
   addToolChip: (chatId: string, tool: ToolChip) => void
   updateLastToolChip: (chatId: string, updates: Partial<ToolChip>) => void
@@ -98,7 +99,7 @@ export const useChatStore = create<ChatState>()(
                 ...chat,
                 messages: [
                   ...chat.messages,
-                  { id: messageId, role: 'assistant', content: '', createdAt: new Date().toISOString(), status: 'streaming', toolChips: [], subAgentChips: [] },
+                  { id: messageId, role: 'assistant', content: '', reasoning: '', createdAt: new Date().toISOString(), status: 'streaming', toolChips: [], subAgentChips: [] },
                 ],
               }
             : chat),
@@ -111,6 +112,17 @@ export const useChatStore = create<ChatState>()(
               ...chat,
               messages: chat.messages.map((message, index) => index === chat.messages.length - 1 && message.role === 'assistant'
                 ? { ...message, content: `${message.content}${token}` }
+                : message),
+              updatedAt: new Date().toISOString(),
+            }
+          : chat),
+      })),
+      appendAssistantReasoning: (chatId, token) => set((state) => ({
+        chats: state.chats.map((chat) => chat.id === chatId
+          ? {
+              ...chat,
+              messages: chat.messages.map((message, index) => index === chat.messages.length - 1 && message.role === 'assistant'
+                ? { ...message, reasoning: `${message.reasoning ?? ''}${token}` }
                 : message),
               updatedAt: new Date().toISOString(),
             }
@@ -207,14 +219,14 @@ export const useChatStore = create<ChatState>()(
             }
           : chat),
       })),
-      finalizeAssistantMessage: (chatId, content) => set((state) => ({
+      finalizeAssistantMessage: (chatId, content, reasoning) => set((state) => ({
         chats: state.chats.map((chat) => {
           if (chat.id !== chatId) return chat
           const now = new Date().toISOString()
           return {
             ...chat,
             messages: chat.messages.map((message, index) => index === chat.messages.length - 1 && message.role === 'assistant'
-              ? { ...message, content, status: 'idle' }
+              ? { ...message, content, reasoning: reasoning ?? message.reasoning, status: 'idle' }
               : message),
             modelHistory: [...chat.modelHistory, { role: 'assistant', content, timestamp: now }],
             updatedAt: now,

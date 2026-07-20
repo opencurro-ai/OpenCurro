@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, FolderOpen, Menu, Settings, Terminal } from 'lucide-react'
+import { BrainCircuit, Eye, FolderOpen, Menu, Settings, Terminal } from 'lucide-react'
 
 import { Composer } from '@/components/chat/Composer'
 import { SubAgentOutput } from '@/components/chat/SubAgentOutput'
@@ -339,6 +339,34 @@ function StrReplaceOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: 
   )
 }
 
+function ReasoningBlock({ reasoning }: { reasoning: string }) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <div className="overflow-hidden rounded-[18px] border border-[#e8d5f5] bg-[#faf5ff] shadow-sm mt-3">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex w-full items-center gap-2 px-4 py-3 text-left text-xs transition-colors hover:bg-[rgba(139,92,246,0.06)] text-[#7c3aed]"
+      >
+        <BrainCircuit className="size-[14px] shrink-0" />
+        <span className="flex-1 truncate text-[13px] font-medium">
+          Reasoning
+        </span>
+        <span className="shrink-0 text-[11px] text-[#7c3aed]/60">
+          {isOpen ? 'Hide' : 'Show'}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="border-t border-[#e8d5f5] p-4">
+          <div className="font-[15px] leading-relaxed text-[#6b21a8] italic whitespace-pre-wrap">
+            {reasoning}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ChatWorkspace({
   chat,
   disabled,
@@ -425,6 +453,9 @@ export function ChatWorkspace({
                       </div>
                     ) : '')}
                   </div>
+                  {message.reasoning ? (
+                    <ReasoningBlock reasoning={message.reasoning} />
+                  ) : null}
                   {message.subAgentChips && message.subAgentChips.length > 0 ? (
                     <div className="flex flex-wrap gap-[10px] mt-3">
                       {message.subAgentChips.map((subAgent) => (

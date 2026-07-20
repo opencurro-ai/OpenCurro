@@ -9,6 +9,7 @@ from src.schemas.providers import ProviderMetadata, ProviderModel
 @dataclass
 class ProviderStreamDelta:
     text: str = ""
+    reasoning: str = ""
     tool_calls: list[dict[str, Any]] | None = None
     finish_reason: Optional[str] = None
     raw: Optional[dict[str, Any]] = None

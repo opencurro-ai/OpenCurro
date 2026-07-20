@@ -33,6 +33,7 @@ export interface UiMessage {
   id: string
   role: ChatRole
   content: string
+  reasoning?: string
   createdAt: string
   status?: 'idle' | 'streaming' | 'error'
   toolChips?: ToolChip[]

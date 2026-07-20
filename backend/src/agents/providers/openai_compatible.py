@@ -72,10 +72,12 @@ class OpenAICompatibleProvider(LLMProvider):
                     delta = choice.get("delta") or {}
                     finish_reason = choice.get("finish_reason")
                     text = self._extract_text(delta.get("content"))
+                    reasoning = self._extract_text(delta.get("reasoning") or delta.get("reasoning_content") or delta.get("reason") or "")
                     tool_calls = delta.get("tool_calls") or None
-                    if text or tool_calls or finish_reason:
+                    if text or reasoning or tool_calls or finish_reason:
                         yield ProviderStreamDelta(
                             text=text,
+                            reasoning=reasoning,
                             tool_calls=tool_calls,
                             finish_reason=finish_reason,
                             raw=event,

@@ -19,6 +19,7 @@ export function useAgentChat() {
     updateLastSubAgentToolChip,
     updateSubAgentStatus,
     appendAssistantToken,
+    appendAssistantReasoning,
     finalizeAssistantMessage,
     markAssistantError,
     setIteration,
@@ -166,13 +167,18 @@ export function useAgentChat() {
             const message = typeof data.message === 'string' ? data.message : 'Sub-agent error'
             updateSubAgentStatus(chatId, session, 'error', message)
           }
+          if (event === 'reasoning') {
+            const token = typeof data.value === 'string' ? data.value : ''
+            appendAssistantReasoning(chatId, token)
+          }
           if (event === 'token') {
             const token = typeof data.value === 'string' ? data.value : ''
             appendAssistantToken(chatId, token)
           }
           if (event === 'message_complete') {
             const finalContent = typeof data.content === 'string' ? data.content : ''
-            finalizeAssistantMessage(chatId, finalContent)
+            const finalReasoning = typeof data.reasoning === 'string' ? data.reasoning : undefined
+            finalizeAssistantMessage(chatId, finalContent, finalReasoning)
             setStatusLabel('Ready')
           }
           if (event === 'error') {
@@ -203,6 +209,7 @@ export function useAgentChat() {
     updateLastSubAgentToolChip,
     updateSubAgentStatus,
     addUserMessage,
+    appendAssistantReasoning,
     appendAssistantToken,
     chats,
     finalizeAssistantMessage,

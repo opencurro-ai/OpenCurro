@@ -74,6 +74,7 @@ class AgentRunner:
             return
 
         visible_answer_parts: list[str] = []
+        visible_reasoning_parts: list[str] = []
         iteration = 0
 
         while iteration < request.max_iterations:
@@ -82,6 +83,7 @@ class AgentRunner:
             yield await send("status", {"state": "thinking", "label": "Thinking..."})
 
             assistant_content_parts: list[str] = []
+            assistant_reasoning_parts: list[str] = []
             streamed_tool_calls: list[dict] = []
             finish_reason: Optional[str] = None
 
@@ -99,6 +101,12 @@ class AgentRunner:
                             assistant_content_parts.append(cleaned)
                             visible_answer_parts.append(cleaned)
                             yield await send("token", {"value": cleaned})
+                    if delta.reasoning:
+                        cleaned = self._normalize_delta(delta.reasoning)
+                        if cleaned:
+                            assistant_reasoning_parts.append(cleaned)
+                            visible_reasoning_parts.append(cleaned)
+                            yield await send("reasoning", {"value": cleaned})
                     if delta.tool_calls:
                         streamed_tool_calls = self._merge_tool_calls(streamed_tool_calls, delta.tool_calls)
                     if delta.finish_reason:
@@ -121,6 +129,8 @@ class AgentRunner:
                         "content": "".join(assistant_content_parts) or None,
                         "tool_calls": streamed_tool_calls,
                     }
+                    if assistant_reasoning_parts:
+                        assistant_tool_message["reasoning_content"] = "".join(assistant_reasoning_parts)
                     session.messages.append(assistant_tool_message)
 
                     for tool_call in streamed_tool_calls:
@@ -219,12 +229,16 @@ class AgentRunner:
                     continue
 
                 final_message = "".join(assistant_content_parts)
-                session.messages.append({"role": "assistant", "content": final_message})
+                final_assistant_message: dict[str, Any] = {"role": "assistant", "content": final_message}
+                if assistant_reasoning_parts:
+                    final_assistant_message["reasoning_content"] = "".join(assistant_reasoning_parts)
+                session.messages.append(final_assistant_message)
                 yield await send(
                     "message_complete",
                     {
                         "content": "".join(visible_answer_parts),
                         "iteration_count": iteration,
+                        "reasoning": "".join(visible_reasoning_parts) if visible_reasoning_parts else None,
                     },
                 )
 
@@ -257,6 +271,8 @@ class AgentRunner:
             built: dict = {"role": message["role"]}
             if message.get("content") is not None:
                 built["content"] = message.get("content")
+            if message.get("reasoning_content") is not None:
+                built["reasoning_content"] = message.get("reasoning_content")
             if message.get("tool_calls") is not None:
                 built["tool_calls"] = message.get("tool_calls")
             if message.get("tool_call_id") is not None:

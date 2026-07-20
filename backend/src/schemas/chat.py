@@ -13,6 +13,7 @@ MessageRole = Literal["system", "user", "assistant", "tool"]
 class ChatMessage(BaseModel):
     role: MessageRole
     content: Optional[str] = None
+    reasoning_content: Optional[str] = None
     tool_calls: Optional[list[dict[str, Any]]] = None
     tool_call_id: Optional[str] = None
     name: Optional[str] = None
