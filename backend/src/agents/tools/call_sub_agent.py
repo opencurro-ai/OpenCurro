@@ -20,7 +20,7 @@ CALL_SUB_AGENT_TOOL_SCHEMA = {
                 },
                 "agent": {
                     "type": "string",
-                    "description": "The name of the specialized sub-agent to execute the task. Currently available sub-agent: deepexplorer.",
+                    "description": "The name of the specialized sub-agent to execute the task. Currently available sub-agents: deepexplorer (read-only code exploration), deepresearcher (web research with file output).",
                 },
                 "task": {
                     "type": "string",
@@ -56,7 +56,7 @@ async def execute_call_sub_agent(
             ok=False,
             error={
                 "code": "unknown_subagent",
-                "message": f"Unknown sub-agent: {agent_name}. Available: deepexplorer.",
+                "message": f"Unknown sub-agent: {agent_name}. Available: deepexplorer, deepresearcher.",
             },
         )
 
@@ -68,6 +68,8 @@ async def execute_call_sub_agent(
     session_store = kwargs.get("session_store")
     agent = kwargs.get("agent")
     subagent_event_queue = kwargs.get("subagent_event_queue")
+    tavily_api_key = kwargs.get("tavily_api_key")
+    firecrawl_api_key = kwargs.get("firecrawl_api_key")
 
     if not all([provider, model, api_key, chat_id, agent, subagent_event_queue]):
         return ToolExecutionResult(
@@ -101,6 +103,8 @@ async def execute_call_sub_agent(
             task=task,
             session_messages=session_messages,
             emit_event=emit_event,
+            tavily_api_key=tavily_api_key,
+            firecrawl_api_key=firecrawl_api_key,
         )
 
         await emit_event("subagent_complete", {"output": output})

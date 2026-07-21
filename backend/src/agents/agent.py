@@ -11,6 +11,7 @@ from src.schemas.chat import ChatMessage, ChatStreamRequest
 from src.services.session_store import SessionStore
 
 import src.agents.subagents.deepexplorer.agent  # noqa: F401 – triggers sub-agent registration
+import src.agents.subagents.deepresearcher.agent  # noqa: F401 – triggers sub-agent registration
 
 
 class AgentRunner:
@@ -146,6 +147,7 @@ class AgentRunner:
                         url = tool_payload.get("url")
                         old_string = tool_payload.get("old_string")
                         new_string = tool_payload.get("new_string")
+                        agent_name = tool_payload.get("agent")
                         yield await send(
                             "tool_call",
                             {
@@ -159,7 +161,7 @@ class AgentRunner:
                                 "url": url,
                                 "old_string": old_string,
                                 "new_string": new_string,
-                                "label": self._tool_label(tool_name, file_path, command, list_path, session_names, url=url),
+                                "label": self._tool_label(tool_name, file_path, command, list_path, session_names, url=url, agent_name=agent_name),
                             },
                         )
 
@@ -313,7 +315,7 @@ class AgentRunner:
             except json.JSONDecodeError:
                 return {}
 
-    def _tool_label(self, tool_name: str, file_path: Optional[str], command: Optional[str] = None, list_path: Optional[str] = None, session_names: Optional[list[str]] = None, url: Optional[str] = None) -> str:
+    def _tool_label(self, tool_name: str, file_path: Optional[str], command: Optional[str] = None, list_path: Optional[str] = None, session_names: Optional[list[str]] = None, url: Optional[str] = None, agent_name: Optional[str] = None) -> str:
         if tool_name == "shall_tool":
             return f"Terminal: {command or 'unknown'}"
         if tool_name == "shell_view":
@@ -322,7 +324,7 @@ class AgentRunner:
         if tool_name == "list_files":
             return f"List: {list_path or 'unknown'}"
         if tool_name == "call_sub_agent":
-            return f"Sub-agent: deepexplorer"
+            return f"Sub-agent: {agent_name or 'deepexplorer'}"
         if tool_name == "web_search":
             return f"Web Search"
         if tool_name == "fatch_web_urls":
