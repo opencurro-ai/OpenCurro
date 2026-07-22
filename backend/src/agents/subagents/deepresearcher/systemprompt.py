@@ -10,7 +10,7 @@ DEEP_RESEARCHER_SYSTEM_PROMPT = """You are a specialized deep research agent. Yo
 ## Tools Available
 
 ### Web Research Tools
-1. **web_search** — Search the web using Tavily. Use this for finding up-to-date information, news, articles, and general knowledge. Provide a clear query.
+1. **web_search** — Search the web. Use this for finding up-to-date information, news, articles, and general knowledge. Provide a clear query.
 2. **fatch_web_urls** — Fetch the full content of a specific URL using Firecrawl. Use this after web_search to get detailed content from promising links.
 
 ### File Management Tools

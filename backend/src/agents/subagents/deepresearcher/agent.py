@@ -46,6 +46,8 @@ async def run_deepresearcher(
     session_messages: list[dict[str, Any]],
     emit_event,
     tavily_api_key: Optional[str] = None,
+    exa_api_key: Optional[str] = None,
+    search_provider: Optional[str] = None,
     firecrawl_api_key: Optional[str] = None,
 ) -> str:
     output_parts: list[str] = []
@@ -97,6 +99,8 @@ async def run_deepresearcher(
                 extra_kwargs: dict[str, Any] = {}
                 if tool_name in ("web_search",):
                     extra_kwargs["tavily_api_key"] = tavily_api_key
+                    extra_kwargs["exa_api_key"] = exa_api_key
+                    extra_kwargs["search_provider"] = search_provider
                 if tool_name in ("fatch_web_urls",):
                     extra_kwargs["firecrawl_api_key"] = firecrawl_api_key
 

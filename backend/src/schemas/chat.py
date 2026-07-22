@@ -43,6 +43,8 @@ class ChatStreamRequest(BaseModel):
     sandbox: SandboxSettings | None = None
     max_iterations: int = Field(default=1000, ge=1, le=1000)
     tavily_api_key: str | None = None
+    exa_api_key: str | None = None
+    search_provider: str | None = None
     firecrawl_api_key: str | None = None
     since_event_id: int = Field(default=-1)
 

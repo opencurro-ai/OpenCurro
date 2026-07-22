@@ -153,6 +153,8 @@ export function useAgentChat() {
       },
       max_iterations: 1000,
       tavily_api_key: settings.tavilyApiKey || undefined,
+      exa_api_key: settings.exaApiKey || undefined,
+      search_provider: settings.searchProvider,
       firecrawl_api_key: settings.firecrawlApiKey || undefined,
       since_event_id: sinceEventId,
     }),

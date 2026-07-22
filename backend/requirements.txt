@@ -8,4 +8,5 @@ pytest-asyncio
 httpx
 novita-sandbox
 tavily-python
+exa-py
 firecrawl-py

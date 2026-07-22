@@ -1,8 +1,9 @@
-import { Loader2, Settings, TriangleAlert } from 'lucide-react'
+import { Loader2, Search, Settings, TriangleAlert } from 'lucide-react'
 
 import { useProviders } from '@/hooks/useProviders'
 import { useSettingsStore } from '@/store/useSettingsStore'
 import type { ProviderId } from '@/types/chat'
+import type { SearchProvider } from '@/store/useSettingsStore'
 
 const providers: ProviderId[] = ['openrouter', 'groq', 'nvidia']
 
@@ -17,6 +18,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     novitaApiKey,
     novitaTemplateId,
     tavilyApiKey,
+    exaApiKey,
+    searchProvider,
     firecrawlApiKey,
     providerBaseUrls,
     providerKeys,
@@ -25,6 +28,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     setNovitaApiKey,
     setNovitaTemplateId,
     setTavilyApiKey,
+    setExaApiKey,
+    setSearchProvider,
     setFirecrawlApiKey,
     setProviderBaseUrl,
     setProviderKey,
@@ -126,15 +131,36 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
 
         <div className="field-group mb-[18px]">
           <label className="field-label flex items-center gap-2 text-sm font-semibold text-[#34322d] mb-[10px]">
+            <Search className="size-[18px]" />
             Web Tools
           </label>
           <div className="space-y-3">
-            <input
-              value={tavilyApiKey}
-              onChange={(event) => setTavilyApiKey(event.target.value)}
-              placeholder="Tavily API key (web search)"
-              className="w-full rounded-[14px] border border-border bg-white px-4 py-3 text-sm text-[#34322d] outline-none placeholder:text-[#858481] focus:border-[#ffc700]"
-            />
+            <div className="rounded-[18px] bg-[#f5f5f5] border border-border p-4">
+              <label className="block text-sm font-semibold text-[#34322d] mb-2">Search provider</label>
+              <select
+                value={searchProvider}
+                onChange={(event) => setSearchProvider(event.target.value as SearchProvider)}
+                className="w-full rounded-[14px] border border-border bg-white px-4 py-3 text-sm text-[#34322d] outline-none"
+              >
+                <option value="tavily">Tavily</option>
+                <option value="exa">Exa</option>
+              </select>
+            </div>
+            {searchProvider === 'tavily' ? (
+              <input
+                value={tavilyApiKey}
+                onChange={(event) => setTavilyApiKey(event.target.value)}
+                placeholder="Tavily API key (web search)"
+                className="w-full rounded-[14px] border border-border bg-white px-4 py-3 text-sm text-[#34322d] outline-none placeholder:text-[#858481] focus:border-[#ffc700]"
+              />
+            ) : (
+              <input
+                value={exaApiKey}
+                onChange={(event) => setExaApiKey(event.target.value)}
+                placeholder="Exa API key (web search)"
+                className="w-full rounded-[14px] border border-border bg-white px-4 py-3 text-sm text-[#34322d] outline-none placeholder:text-[#858481] focus:border-[#ffc700]"
+              />
+            )}
             <input
               value={firecrawlApiKey}
               onChange={(event) => setFirecrawlApiKey(event.target.value)}

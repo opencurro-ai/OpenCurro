@@ -186,6 +186,8 @@ class AgentRunner:
                                     agent=self,
                                     subagent_event_queue=subagent_event_queue,
                                     tavily_api_key=request.tavily_api_key,
+                                    exa_api_key=request.exa_api_key,
+                                    search_provider=request.search_provider,
                                     firecrawl_api_key=request.firecrawl_api_key,
                                 )
                             )

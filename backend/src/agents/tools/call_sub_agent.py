@@ -69,6 +69,8 @@ async def execute_call_sub_agent(
     agent = kwargs.get("agent")
     subagent_event_queue = kwargs.get("subagent_event_queue")
     tavily_api_key = kwargs.get("tavily_api_key")
+    exa_api_key = kwargs.get("exa_api_key")
+    search_provider = kwargs.get("search_provider")
     firecrawl_api_key = kwargs.get("firecrawl_api_key")
 
     if not all([provider, model, api_key, chat_id, agent, subagent_event_queue]):
@@ -104,6 +106,8 @@ async def execute_call_sub_agent(
             session_messages=session_messages,
             emit_event=emit_event,
             tavily_api_key=tavily_api_key,
+            exa_api_key=exa_api_key,
+            search_provider=search_provider,
             firecrawl_api_key=firecrawl_api_key,
         )
 
