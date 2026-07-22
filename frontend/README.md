@@ -13,584 +13,245 @@
     border: 1px solid #1e293b;
   "><span style="color:#38bdf8;">  ┌──────────────────────────────────────────────┐</span>
 <span style="color:#38bdf8;">  │</span>  <span style="color:#fbbf24;">▌</span><span style="color:#6366f1;">╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span><span style="color:#fbbf24;">▐</span>  <span style="color:#38bdf8;">│</span>
-<span style="color:#38bdf8;">  │</span>  <span style="color:#fbbf24;">▌</span>  <span style="color:#fbbf24;font-weight:bold;">  OpenCurro Frontend</span>           <span style="color:#fbbf24;">▐</span>  <span style="color:#38bdf8;">│</span>
-<span style="color:#38bdf8;">  │</span>  <span style="color:#fbbf24;">▌</span>  <span style="color:#94a3b8;">  React 19 · TypeScript 5.8 · Vite 7</span>  <span style="color:#fbbf24;">▐</span>  <span style="color:#38bdf8;">│</span>
+<span style="color:#38bdf8;">  │</span>  <span style="color:#fbbf24;">▌</span>  <span style="color:#fbbf24;font-weight:bold;">  OpenCurro Frontend Dashboard</span>  <span style="color:#fbbf24;">▐</span>  <span style="color:#38bdf8;">│</span>
+<span style="color:#38bdf8;">  │</span>  <span style="color:#fbbf24;">▌</span>  <span style="color:#94a3b8;">  React 19 · Vite 7 · Zustand 5 · Tailwind</span>  <span style="color:#fbbf24;">▐</span>  <span style="color:#38bdf8;">│</span>
 <span style="color:#38bdf8;">  │</span>  <span style="color:#fbbf24;">▌</span><span style="color:#6366f1;">╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span><span style="color:#fbbf24;">▐</span>  <span style="color:#38bdf8;">│</span>
 <span style="color:#38bdf8;">  └──────────────────────────────────────────────┘</span>
 
-  <span style="color:#22c55e;">▸</span> <span style="color:#94a3b8;">Dev:</span> <span style="color:#f97316;">npm run dev</span>
-  <span style="color:#22c55e;">▸</span> <span style="color:#94a3b8;">Build:</span> <span style="color:#f97316;">npm run build</span>
-  <span style="color:#22c55e;">▸</span> <span style="color:#94a3b8;">Port:</span> <span style="color:#f97316;">5173</span>
+  <span style="color:#22c55e;">▸</span> <span style="color:#94a3b8;">Framework:</span> <span style="color:#38bdf8;">React 19 (TypeScript 5.8)</span>
+  <span style="color:#22c55e;">▸</span> <span style="color:#94a3b8;">Build Tool:</span> <span style="color:#6366f1;">Vite 7</span>
+  <span style="color:#22c55e;">▸</span> <span style="color:#94a3b8;">State Store:</span> <span style="color:#ec4899;">Zustand 5 (Persisted)</span>
 </pre>
 </div>
 
 ---
 
-## Architecture
+## 🎨 Overview & Workspace Layout
+
+The OpenCurro frontend is a responsive developer dashboard engineered to provide rich real-time visual tracking of autonomous agent tasks.
+
+It splits the desktop workspace into two primary panels:
+1. **The Chat Workspace (Left Pane)**: Visualizes model prompt streams, collapsible tool execution output chips, and deep sub-agent logs.
+2. **The Sandbox Workspace (Right Pane)**: An interactive filesystem explorer allowing users to inspect folder structures, view files, edit source code, and save changes back to the active sandbox in real time.
+
+On small screens and mobile devices, a bottom navigation tab bar converts the workspace into dedicated **Chat** and **Files** views.
 
 ```mermaid
 graph TB
-    subgraph APP["App.tsx — Root Layout"]
-        DIR["Desktop Grid<br/>Chat + File Explorer"]
-        MOB["Mobile Tab Bar<br/>Chat | Files"]
-        SIDEBAR["History Sidebar"]
-        MODAL["Settings Modal"]
+    subgraph AppMainLayout["App.tsx - Core Layout Shell"]
+        SIDEBAR["HistorySidebar<br/>Slide-over conversation list"]
+        GRID["Responsive Flex Grid<br/>Desktop view: Side-by-side / Mobile view: Tabs"]
+        SET_MODAL["SettingsModal<br/>Central API key & provider overlay"]
     end
 
-    subgraph CHAT["Chat Components"]
-        CW["ChatWorkspace"]
-        COMP["Composer"]
-        SUB["SubAgentOutput"]
-        HS["HistorySidebar"]
+    subgraph ChatViewPanel["Chat Workspace Panel"]
+        CW["ChatWorkspace<br/>Scroll-snapping chat feed"]
+        COMP["Composer<br/>Message input, token metrics, state labels"]
+        SA_MODAL["SubAgentOutput<br/>Real-time sub-agent terminal monitor"]
+        CHIPS["Visual Tool Output Renderers<br/>Terminal, Code diff, Scrapes, Searches"]
     end
 
-    subgraph FILES["File Components"]
-        FE["FileExplorer"]
-        FV["FileViewer"]
+    subgraph FilesystemPanel["Sandbox Filesystem Panel"]
+        FE["FileExplorer<br/>Interactive directory browser"]
+        FV["FileViewer<br/>Inline code viewer with save triggers"]
     end
 
-    subgraph SETTINGS["Settings"]
-        SM["SettingsModal"]
-    end
-
-    subgraph STATE["Zustand Stores (persisted to LocalStorage)"]
-        CS["useChatStore<br/>'novita-agent-chats'"]
-        SS["useSettingsStore<br/>'novita-agent-settings'"]
-    end
-
-    subgraph HOOKS["Custom Hooks"]
-        UAC["useAgentChat<br/>SSE stream orchestration"]
-        UP["useProviders<br/>Model fetching"]
-    end
-
-    subgraph API["API Layer"]
-        APICLIENT["lib/api.ts<br/>fetchProviders · streamChat<br/>fetchSandboxFiles · etc."]
-        ENV["lib/env.ts<br/>VITE_BACKEND_URL"]
-    end
-
-    APP --> CHAT
-    APP --> FILES
-    APP --> SETTINGS
-
+    GRID -->|Left Column / Tab 1| CW
+    GRID -->|Right Column / Tab 2| FE
     CW --> COMP
-    CW --> SUB
-    CW --> HS
-
-    CHAT --> UAC
-    CHAT --> CS
-    SETTINGS --> SS
-    SETTINGS --> UP
-
-    UAC --> APICLIENT
-    UAC --> CS
-    UAC --> SS
-
-    UP --> APICLIENT
-    UP --> SS
-
-    APICLIENT --> ENV
-
-    classDef layout fill:#f0f9ff,stroke:#3b82f6,stroke-width:2px
-    classDef chat fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
-    classDef files fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
-    classDef settings fill:#faf5ff,stroke:#a855f7,stroke-width:2px
-    classDef state fill:#fdf2f8,stroke:#ec4899,stroke-width:2px
-    classDef hooks fill:#fff7ed,stroke:#f97316,stroke-width:2px
-    classDef api fill:#f8fafc,stroke:#64748b,stroke-width:2px
-    class APP layout
-    class CW,COMP,SUB,HS chat
-    class FE,FV files
-    class SM settings
-    class CS,SS state
-    class UAC,UP hooks
-    class APICLIENT,ENV api
+    CW --> SA_MODAL
+    CW --> CHIPS
+    FE --> FV
+    AppMainLayout --> SIDEBAR
+    AppMainLayout --> SET_MODAL
 ```
 
 ---
 
-## Project Structure
+## 🔁 Real-Time Message Dispatch & SSE Integration
+
+Managing Server-Sent Events (SSE) stream responses requires strict state synchronization. The application delegates stream handling to a custom hook, `useAgentChat`, which reads settings, updates Zustand chat records, parses the API readable stream chunk-by-chunk, and updates UI nodes.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User Component
+    participant Hook as useAgentChat Hook
+    participant S_Chat as useChatStore
+    participant S_Sets as useSettingsStore
+    participant API as API Client (lib/api.ts)
+    participant BE as Backend Server (FastAPI)
+
+    U->>Hook: sendMessage("Build a react app")
+    Hook->>S_Sets: Fetch Active API Keys, Model ID, & Sandboxes
+    Hook->>S_Chat: addUserMessage(content)
+    Hook->>S_Chat: startAssistantMessage() (Sets status to streaming)
+    Hook->>S_Chat: setIteration(0, 1000)
+
+    Hook->>API: ensureChatSession(chatId, history)
+    API->>BE: POST /api/chat/session
+    BE-->>API: Status Checked (200 OK)
+
+    Hook->>API: streamChat(streamPayload)
+    API->>BE: POST /api/chat/stream
+    BE-->>API: Server-Sent Events Stream Open
+
+    loop Read SSE Chunk Parser
+        API-->>Hook: Parsed event payload (event, data)
+        alt event is "token"
+            Hook->>S_Chat: appendAssistantToken(value)
+        else event is "reasoning"
+            Hook->>S_Chat: appendAssistantReasoning(value)
+        else event is "tool_call"
+            Hook->>S_Chat: addToolChip(toolDetails)
+        else event is "tool_result"
+            Hook->>S_Chat: updateLastToolChip(resultDetails)
+        else event is "subagent_*"
+            Hook->>S_Chat: appendSubAgentActivity(subDetails)
+        end
+        Hook-->>U: Trigger React Reactive Re-render
+    end
+
+    API-->>Hook: Connection Closed / Terminated
+    Hook->>S_Chat: setStreaming(false)
+    Hook->>S_Chat: setStatusLabel("Ready")
+    Hook-->>U: Stream Complete
+```
+
+---
+
+## 🗄️ Application State Store Specifications
+
+The client application manages and persists state across browser reloads using two isolated **Zustand 5** stores backed by the `persist` middleware.
+
+### 1. Chat Store (`useChatStore`)
+Saved in browser storage as `novita-agent-chats`.
+
+| State / Action Field | Type / Signature | Purpose |
+|---|---|---|
+| `chats` | `ChatRecord[]` | Complete history of chat interactions, sandbox metadata, and model outputs. |
+| `activeChatId` | `string` | ID of the active chat. |
+| `isStreaming` | `boolean` | Flag used to disable buttons, composer inputs, and settings modifications during active streams. |
+| `statusLabel` | `string` | Real-time status label shown in the input composer (e.g., "Initializing Sandbox...", "Thinking..."). |
+| `iterationCurrent` | `number` | The current run-loop iteration count. |
+| `iterationLimit` | `number` | The maximum allowed model turns before automatic loop termination. |
+| `createChat` | `() => void` | Spawns a new workspace chat. |
+| `deleteChat` | `(id: string) => void` | Disposes of a chat record. |
+| `addUserMessage` | `(id: string, content: string) => void` | Appends a user query node to history. |
+| `addToolChip` | `(id: string, tool: ToolChip) => void` | Appends an active execution card into the streaming message. |
+| `updateLastToolChip`| `(id: string, updates: Partial<ToolChip>) => void` | Merges the output payload or exit status code of an completed tool. |
+
+### 2. Settings Store (`useSettingsStore`)
+Saved in browser storage as `novita-agent-settings`.
+
+| State / Action Field | Type / Signature | Purpose |
+|---|---|---|
+| `providerKeys` | `Record<ProviderId, string>` | Client-managed API keys for OpenRouter, Groq, and NVIDIA NIM. |
+| `providerBaseUrls` | `Record<ProviderId, string>` | Custom override URLs for OpenAI-compatible proxies. |
+| `selectedProvider` | `ProviderId` | Currently active LLM provider. |
+| `selectedModel` | `string` | Selected inference model. |
+| `novitaApiKey` | `string` | Novita sandbox API key. |
+| `novitaTemplateId` | `string` | Optional sandbox template UUID (e.g., specific Linux environments). |
+| `tavilyApiKey` | `string` | Optional Tavily Web search token. |
+| `firecrawlApiKey` | `string` | Optional Firecrawl webpage extraction token. |
+| `providerCatalog` | `ProviderMetadata[]` | Loaded list of supported LLM providers. |
+| `modelsByProvider` | `Record<ProviderId, ProviderModel[]>` | List of available models per provider. |
+
+---
+
+## 🛠️ Rich Visual Tool Chips
+
+Rather than displaying raw JSON strings, the dashboard parses incoming tools and renders rich visual interfaces inside the conversation feed.
+
+```
+┌────────────────────────────────────────────────────────┐
+│  [icon] Terminal: python build.py                      │
+├────────────────────────────────────────────────────────┤
+│  STATUS: done (Exit Code 0)                            │
+│                                                        │
+│  stdout:                                               │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Checking code standards...                       │  │
+│  │ Compiled application bundle successfully!       │  │
+│  └──────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────┘
+```
+
+The application provides dedicated output components:
+- **`TerminalOutput` (`shall_tool`)**: Mimics a standard terminal interface. Renders command strings, running pulses, stdout/stderr output panes, and return codes.
+- **`ShellViewOutput` (`shell_view`)**: Monitors active background execution handlers inside the sandbox.
+- **`ListFilesOutput` (`list_files`)**: Renders directory lists with folder/file icons and sizes.
+- **`WebSearchOutput` (`web_search`)**: Groups web search results into cards with linked URLs.
+- **`FetchWebOutput` (`fatch_web_urls`)**: Renders extracted webpage contents in a structured preview block.
+- **`StrReplaceOutput` (`str_replace`)**: Renders red (deleted) and green (inserted) string-replacement diffs.
+- **`ReasoningBlock`**: Renders a collapsible reasoning block containing thinking paths (`reasoning_content`) extracted from supported reasoning models.
+
+---
+
+## 📁 Project Structure
 
 ```
 frontend/
 ├── src/
-│   ├── main.tsx                    # React 19 StrictMode entry point
-│   ├── App.tsx                     # Root layout (desktop/mobile, sidebar, settings)
-│   ├── index.css                   # Tailwind v4 + custom theme (warm/light)
-│   ├── vite-env.d.ts               # Vite env type declarations
+│   ├── main.tsx                    # Mounts React strict application node
+│   ├── App.tsx                     # Top-level workspace grid and layout routing
+│   ├── index.css                   # Global styling directives and custom variables
+│   ├── vite-env.d.ts               # Environment declarations
 │   ├── app/
-│   │   └── routes/route.ts        # Route constants
-│   ├── types/
-│   │   ├── chat.ts                 # ChatRecord, UiMessage, ToolChip, SubAgentChip
-│   │   ├── provider.ts             # ProviderMetadata, ProviderModel, ProviderSettings
-│   │   └── sandbox.ts              # FileTreeNode, SandboxFilesResponse
+│   │   └── routes/                 # Single-page client-side paths
+│   ├── types/                      # TypeScript definitions
+│   │   ├── chat.ts                 # ChatRecord, UiMessage, ToolChip interfaces
+│   │   ├── provider.ts             # Provider metadata interfaces
+│   │   └── sandbox.ts              # File tree and node schemas
 │   ├── lib/
-│   │   ├── api.ts                  # Backend API client + SSE stream parsing
-│   │   ├── env.ts                  # VITE_BACKEND_URL configuration
-│   │   └── utils.ts                # cn() utility (clsx + tailwind-merge)
-│   ├── hooks/
-│   │   ├── useAgentChat.ts         # SSE stream orchestration & store dispatch
-│   │   └── useProviders.ts         # Provider catalog & model loading
-│   ├── store/
-│   │   ├── useChatStore.ts         # Zustand store: messages, tools, streaming state
-│   │   └── useSettingsStore.ts     # Zustand store: API keys, models, preferences
+│   │   ├── api.ts                  # Fetch wrappers & async stream readers
+│   │   ├── env.ts                  # Vite environmental routing
+│   │   └── utils.ts                # cn utility helper for class merging
+│   ├── hooks/                      # Orchestration hooks
+│   │   ├── useAgentChat.ts         # SSE reading & chat dispatching
+│   │   └── useProviders.ts         # LLM configuration discovery
+│   ├── store/                      # Zustand state persistence
+│   │   ├── useChatStore.ts         # Chat records and active streams
+│   │   └── useSettingsStore.ts     # User API keys, models, and custom providers
 │   ├── utils/
-│   │   └── id.ts                   # ID generator (nanoid-style)
-│   └── components/
+│   │   └── id.ts                   # Secure runtime ID generators
+│   └── components/                 # Component tree
 │       ├── chat/
-│       │   ├── ChatWorkspace.tsx    # Message list + tool output renderers
-│       │   ├── Composer.tsx         # Input area with iteration display
-│       │   ├── HistorySidebar.tsx   # Chat history list (create/delete)
-│       │   └── SubAgentOutput.tsx   # Modal for sub-agent activity
+│       │   ├── ChatWorkspace.tsx   # Custom message nodes and tool chip renderers
+│       │   ├── Composer.tsx        # Structured user input bar
+│       │   ├── HistorySidebar.tsx  # Dynamic side-drawer history list
+│       │   └── SubAgentOutput.tsx  # Specialized sub-agent execution window
 │       ├── files/
-│       │   ├── FileExplorer.tsx     # Tree-based sandbox file browser
-│       │   └── FileViewer.tsx       # Inline code viewer/editor with save
+│       │   ├── FileExplorer.tsx    # Tree directory browser
+│       │   └── FileViewer.tsx      # Inline code viewer & local saving interface
 │       ├── settings/
-│       │   └── SettingsModal.tsx    # Full settings: API keys, models, sandbox
-│       └── ui/
-│           └── button.tsx          # shadcn/ui Button component
-├── public/
-│   └── _redirects                  # SPA redirect rules
-├── package.json
-├── vite.config.ts                  # Vite config (React, Tailwind, proxy, alias)
-├── tsconfig.json                   # Root TypeScript config
-├── tsconfig.app.json               # App TypeScript config
-├── tsconfig.node.json              # Node/Vite TypeScript config
-├── components.json                 # shadcn/ui configuration
-└── eslint.config.js                # ESLint configuration
+│       │   └── SettingsModal.tsx   # Settings modal for API key management
+│       └── ui/                     # Generic form elements
+└── package.json                    # Project metadata & npm scripts
 ```
 
 ---
 
-## Component Tree
+## 🚀 Development Workflow
 
-```mermaid
-graph TB
-    APP["`**App.tsx**`"]
-
-    APP --> HSIDEBAR["HistorySidebar<br/>Chat history management"]
-    APP --> CHATWS["ChatWorkspace<br/>Main chat panel"]
-    APP --> FILEEX["FileExplorer<br/>Sandbox file browser"]
-    APP --> SETMODAL["SettingsModal<br/>Configuration modal"]
-
-    CHATWS --> COMPOSER["Composer<br/>Text input + iteration display"]
-    CHATWS --> SUBOUTPUT["SubAgentOutput<br/>Sub-agent modal"]
-    CHATWS --> TOOLOUT["Tool Output Renderers"]
-
-    TOOLOUT --> TO["TerminalOutput<br/>shall_tool"]
-    TOOLOUT --> SVO["ShellViewOutput<br/>shell_view"]
-    TOOLOUT --> LFO["ListFilesOutput<br/>list_files"]
-    TOOLOUT --> WSO["WebSearchOutput<br/>web_search"]
-    TOOLOUT --> FWO["FetchWebOutput<br/>fatch_web_urls"]
-    TOOLOUT --> SRO["StrReplaceOutput<br/>str_replace"]
-    TOOLOUT --> RB["ReasoningBlock<br/>reasoning"]
-    TOOLOUT --> GENC["GenericChip<br/>file_read/write"]
-
-    FILEEX --> TN["TreeNode<br/>Recursive file tree"]
-    FILEEX --> FILEV["FileViewer<br/>Code viewer/editor"]
-
-    SETMODAL --> PROV["Provider Config<br/>OpenRouter / Groq / NVIDIA"]
-    SETMODAL --> NOV["Novita Sandbox<br/>API key + template"]
-    SETMODAL --> WEB["Web Tools<br/>Tavily + Firecrawl"]
-    SETMODAL --> SELECT["Model Selection<br/>Dropdown"]
-
-    APP -.->|"Zustand"| CS["useChatStore<br/>'novita-agent-chats'"]
-    APP -.->|"Zustand"| SS["useSettingsStore<br/>'novita-agent-settings'"]
-
-    classDef main fill:#f0f9ff,stroke:#3b82f6,stroke-width:2px
-    classDef chat fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
-    classDef files fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
-    classDef settings fill:#faf5ff,stroke:#a855f7,stroke-width:2px
-    classDef output fill:#fdf2f8,stroke:#ec4899,stroke-width:2px
-    classDef state fill:#fff7ed,stroke:#f97316,stroke-width:2px
-    class APP main
-    class HSIDEBAR,CHATWS,COMPOSER,SUBOUTPUT chat
-    class FILEEX,TN,FILEV files
-    class SETMODAL,PROV,NOV,WEB,SELECT settings
-    class TO,TSVO,TLFO,TWSO,TFWO,TSRO,TRB,TGENC output
-    class CS,SS state
-```
-
----
-
-## Data Flow: Message Sending
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant COMP as Composer
-    participant A as App.tsx
-    participant H as useAgentChat
-    participant CS as ChatStore
-    participant SS as SettingsStore
-    participant API as API Client
-    participant BE as Backend
-
-    U->>COMP: Type message + press Enter
-    COMP->>A: onSendMessage(content)
-    A->>H: sendMessage(content)
-
-    H->>SS: Read API keys, model, provider
-    H->>CS: addUserMessage(chatId, content)
-    H->>CS: startAssistantMessage(chatId)
-    H->>CS: setStreaming(true)
-    H->>CS: setIteration(0, 1000)
-    H->>CS: setStatusLabel("Thinking...")
-
-    H->>API: ensureChatSession(chatId, history)
-    API->>BE: POST /api/chat/session
-    BE-->>API: 200 OK
-    API-->>H: void
-
-    H->>API: streamChat(payload)
-    API->>BE: POST /api/chat/stream
-    BE-->>API: SSE stream opened
-
-    loop Each SSE event
-        API-->>H: { event, data }
-        H->>CS: dispatch to store
-        CS-->>COMP: React re-render
-    end
-
-    API-->>H: Stream closed
-    H->>CS: setStreaming(false)
-    H->>CS: setStatusLabel("Ready")
-    H-->>A: void
-    A-->>COMP: -
-```
-
----
-
-## Zustand Stores
-
-### `useChatStore` (persisted as `novita-agent-chats`)
-
-| State | Type | Description |
-|---|---|---|
-| `chats` | `ChatRecord[]` | All chat conversations |
-| `activeChatId` | `string` | Currently active chat ID |
-| `isStreaming` | `boolean` | Whether a stream is in progress |
-| `statusLabel` | `string` | Current status text |
-| `iterationCurrent` | `number` | Current iteration number |
-| `iterationLimit` | `number` | Max iterations |
-
-| Action | Description |
-|---|---|
-| `createChat()` | Create new empty chat |
-| `deleteChat(id)` | Delete a chat |
-| `setActiveChat(id)` | Switch active chat |
-| `addUserMessage(id, content)` | Add user message to chat |
-| `startAssistantMessage(id)` | Create placeholder assistant message |
-| `appendAssistantToken(id, token)` | Stream token to current assistant message |
-| `appendAssistantReasoning(id, token)` | Stream reasoning token |
-| `finalizeAssistantMessage(id, content, reasoning?)` | Finalize assistant message |
-| `markAssistantError(id, message)` | Mark message as errored |
-| `addToolChip(id, tool)` | Add tool activity chip |
-| `updateLastToolChip(id, updates)` | Update last tool chip (e.g., with result) |
-| `addSubAgentChip(id, subAgent)` | Add sub-agent chip |
-| `appendSubAgentToken(id, session, token)` | Stream sub-agent token |
-| `addSubAgentToolChip(id, session, tool)` | Add sub-agent tool chip |
-| `updateSubAgentStatus(id, session, status)` | Update sub-agent status |
-| `setSandboxInfo(id, info)` | Set sandbox metadata |
-| `replaceModelHistory(id, history)` | Replace model history |
-
-### `useSettingsStore` (persisted as `novita-agent-settings`)
-
-| State | Type | Description |
-|---|---|---|
-| `providerKeys` | `Record<ProviderId, string>` | LLM provider API keys |
-| `providerBaseUrls` | `Record<ProviderId, string>` | Custom base URLs |
-| `selectedProvider` | `ProviderId` | Active provider |
-| `selectedModel` | `string` | Active model ID |
-| `novitaApiKey` | `string` | Novita sandbox API key |
-| `novitaTemplateId` | `string` | Optional sandbox template ID |
-| `tavilyApiKey` | `string` | Tavily search API key |
-| `firecrawlApiKey` | `string` | Firecrawl API key |
-| `providerCatalog` | `ProviderMetadata[]` | Available providers |
-| `modelsByProvider` | `Record<ProviderId, ProviderModel[]>` | Models per provider |
-
----
-
-## TypeScript Types
-
-### `ChatRecord`
-```typescript
-interface ChatRecord {
-  id: string
-  title: string
-  createdAt: string
-  updatedAt: string
-  messages: UiMessage[]
-  modelHistory: BackendMessage[]
-  eventHistory: Record<string, unknown>[]
-  sandbox?: SandboxInfo
-}
-```
-
-### `UiMessage`
-```typescript
-interface UiMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  reasoning?: string
-  createdAt: string
-  status?: 'idle' | 'streaming' | 'error'
-  toolChips?: ToolChip[]
-  subAgentChips?: SubAgentChip[]
-}
-```
-
-### `ToolChip`
-```typescript
-interface ToolChip {
-  id: string
-  name: string
-  label: string
-  filePath?: string
-  command?: string
-  sessionName?: string
-  sessionNames?: string[]
-  path?: string
-  query?: string
-  url?: string
-  oldString?: string
-  newString?: string
-  ok?: boolean
-  resultData?: Record<string, unknown>
-}
-```
-
-### `SubAgentChip`
-```typescript
-interface SubAgentChip {
-  id: string
-  session: string
-  agent: string
-  output: string
-  toolChips: ToolChip[]
-  status: 'running' | 'completed' | 'error'
-  errorMessage?: string
-}
-```
-
----
-
-## Tool Output Components
-
-Each tool has a dedicated visual component in `ChatWorkspace.tsx`:
-
-| Component | Tool | Visual |
-|---|---|---|
-| `TerminalOutput` | `shall_tool` | Terminal icon, command display, stdout/stderr panes, exit code |
-| `ShellViewOutput` | `shell_view` | Multi-session output with per-session status |
-| `ListFilesOutput` | `list_files` | File listing with icons, sizes, directory indicators |
-| `WebSearchOutput` | `web_search` | Search results as linked cards with descriptions |
-| `FetchWebOutput` | `fatch_web_urls` | Fetched page content in scrollable pre block |
-| `StrReplaceOutput` | `str_replace` | Old string (red) → new string (green) diff |
-| `ReasoningBlock` | reasoning | Collapsible purple reasoning block |
-| Generic chip | `file_read` / `file_write` | Pill badge with file path |
-
-All tool outputs share the same pattern:
-1. Collapsible header with icon, label, and status indicator
-2. Status: `running...` (animated pulse), `done` (green), `error` (red)
-3. Expandable detail pane with tool-specific content
-
----
-
-## SSE Event Handling
-
-The `streamChat` function in `lib/api.ts` handles SSE parsing:
-
-```
-event: token
-data: {"value": "Hello"}
-
-event: tool_call
-data: {"name": "shall_tool", "command": "ls -la", ...}
-
-event: tool_result
-data: {"name": "shall_tool", "ok": true, "result": {...}}
-
-event: message_complete
-data: {"content": "Final response...", "iteration_count": 3}
-
-event: done
-data: {"ok": true}
-```
-
-The `useAgentChat` hook dispatches each event type to the appropriate store action:
-
-| SSE Event | Store Action |
-|---|---|
-| `status` | `setStatusLabel()` |
-| `iteration` | `setIteration()` |
-| `sandbox` | `setSandboxInfo()` |
-| `token` | `appendAssistantToken()` |
-| `reasoning` | `appendAssistantReasoning()` |
-| `tool_call` | `addToolChip()` |
-| `tool_result` | `updateLastToolChip()` |
-| `subagent_start` | `addSubAgentChip()` |
-| `subagent_token` | `appendSubAgentToken()` |
-| `subagent_tool_call` | `addSubAgentToolChip()` |
-| `subagent_tool_result` | `updateLastSubAgentToolChip()` |
-| `subagent_complete` | `updateSubAgentStatus('completed')` |
-| `subagent_error` | `updateSubAgentStatus('error')` |
-| `message_complete` | `finalizeAssistantMessage()` |
-| `error` | `markAssistantError()` |
-| `done` | `setStreaming(false)` |
-
----
-
-## Styling
-
-### Theme
-- **Tailwind CSS v4** with CSS variables
-- **Warm/light** color scheme
-- Custom animations: `fadeUp`, `blinkWave`
-- CSS variables for branding colors
-
-### shadcn/ui
-- **New York** style variant
-- Custom Button component at `components/ui/button.tsx`
-- Components use `cn()` utility (`clsx` + `tailwind-merge`)
-
-### Key CSS Variables
-```css
-:root {
-  --color-border: #e5e4e2;
-  --color-bg: #fbfbfa;
-  --color-text: #34322d;
-  --color-accent: #ffc700;
-  --color-purple: #a855f7;
-}
-```
-
----
-
-## Responsive Layout
-
-```mermaid
-graph TD
-    subgraph Desktop["Desktop (md+)"]
-        GRID["CSS Grid<br/>grid-cols-[minmax(360px,40%)_1fr]"]
-        LEFT["Left Panel<br/>ChatWorkspace"]
-        RIGHT["Right Panel<br/>FileExplorer"]
-    end
-
-    subgraph Mobile["Mobile (<md)"]
-        TABS["Tab Bar<br/>Chat | Files"]
-        PANEL["Single Panel<br/>Switches between Chat & Files"]
-    end
-
-    subgraph Overlays
-        SIDEBAR["HistorySidebar<br/>Slide-in from left"]
-        MODAL["SettingsModal<br/>Centered overlay"]
-    end
-
-    Desktop --> GRID
-    GRID --> LEFT
-    GRID --> RIGHT
-    Mobile --> TABS
-    TABS --> PANEL
-
-    style Desktop fill:#f0f9ff,stroke:#3b82f6,stroke-width:2px
-    style Mobile fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
-    style Overlays fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
-```
-
----
-
-## API Client (`lib/api.ts`)
-
-| Function | Method | Endpoint | Purpose |
-|---|---|---|---|
-| `fetchProviders()` | GET | `/api/providers` | List supported providers |
-| `fetchModels()` | POST | `/api/providers/models` | Fetch models for provider |
-| `ensureChatSession()` | POST | `/api/chat/session` | Create/hydrate session |
-| `streamChat()` | POST | `/api/chat/stream` | SSE streaming chat |
-| `fetchSandboxFiles()` | GET | `/api/sandbox/files` | List sandbox file tree |
-| `fetchSandboxFileContent()` | GET | `/api/sandbox/file-content` | Read file content |
-| `saveSandboxFileContent()` | POST | `/api/sandbox/file-content` | Write file content |
-
----
-
-## Dev Proxy
-
-Vite is configured to proxy `/api` requests to the backend:
-
-```typescript
-// vite.config.ts
-server: {
-  proxy: {
-    '/api': {
-      target: 'http://localhost:8000',
-      changeOrigin: true,
-    },
-  },
-}
-```
-
-This means during development, the frontend at `localhost:5173` can make API calls to `/api/*` without CORS issues.
-
----
-
-## Dependencies
-
-### Runtime
-| Package | Version | Purpose |
-|---|---|---|
-| `react` | ^19.1.1 | UI framework |
-| `react-dom` | ^19.1.1 | DOM renderer |
-| `zustand` | ^5.0.8 | State management with persistence |
-| `lucide-react` | ^0.542.0 | Icon library |
-| `tailwindcss` | ^4.1.12 | Utility-first CSS |
-| `@tailwindcss/vite` | ^4.1.12 | Tailwind Vite plugin |
-| `tailwind-merge` | ^3.3.1 | Class name merging |
-| `clsx` | ^2.1.1 | Conditional class names |
-| `class-variance-authority` | ^0.7.1 | Component variants |
-| `@radix-ui/react-slot` | ^1.2.3 | Primitive component |
-
-### Dev
-| Package | Version | Purpose |
-|---|---|---|
-| `typescript` | ~5.8.3 | TypeScript compiler |
-| `vite` | ^7.1.2 | Build tool and dev server |
-| `@vitejs/plugin-react` | ^5.0.0 | React plugin |
-| `eslint` | ^9.33.0 | Linter |
-| `tw-animate-css` | ^1.3.7 | Animation utilities |
-
----
-
-## Commands
+To boot the frontend dev server, run the following commands:
 
 ```bash
-npm run dev         # Start dev server (port 5173)
-npm run build       # TypeScript check + Vite build
-npm run build:local # Same as build (alias)
-npm run preview     # Preview production build
-npm run lint        # ESLint check
+# Navigate to the frontend workspace
+cd frontend
+
+# Install package dependencies
+npm install
+
+# Start Vite server with live reload proxy
+npm run dev
 ```
 
----
+### Build & Production Output
+To compile the TypeScript project into optimized, static browser assets, execute:
 
-## Key Conventions
-
-### Import Alias
-All imports use the `@` alias pointing to `src/`:
-```typescript
-import { ChatWorkspace } from '@/components/chat/ChatWorkspace'
-import { useChatStore } from '@/store/useChatStore'
+```bash
+npm run build
 ```
 
-### File Naming
-- Components: PascalCase (`ChatWorkspace.tsx`)
-- Hooks: camelCase with `use` prefix (`useAgentChat.ts`)
-- Stores: camelCase with `use` prefix + `Store` suffix (`useChatStore.ts`)
-- Types: camelCase (`chat.ts`, `provider.ts`, `sandbox.ts`)
-- Utilities: camelCase (`api.ts`, `env.ts`, `utils.ts`)
-
-### State Pattern
-- UI state: React `useState` and `useMemo`
-- Persistent state: Zustand with `persist` middleware
-- Ephemeral global state: Zustand without persistence
-- Component-local state that doesn't need to survive reloads: `useState`
+The resulting assets are written to `frontend/dist/`. In production, the backend serves these assets statically from the `dist/` root, keeping the entire application within a single network container footprint.

@@ -13,468 +13,295 @@
     border: 1px solid #21262d;
   "><span style="color:#ffc700;">  ┌──────────────────────────────────────────────┐</span>
 <span style="color:#ffc700;">  │</span>  <span style="color:#22c55e;">▌</span><span style="color:#3b82f6;">╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span><span style="color:#22c55e;">▐</span>  <span style="color:#ffc700;">│</span>
-<span style="color:#ffc700;">  │</span>  <span style="color:#22c55e;">▌</span>  <span style="color:#38bdf8;font-weight:bold;">  OpenCurro Backend</span>              <span style="color:#22c55e;">▐</span>  <span style="color:#ffc700;">│</span>
-<span style="color:#ffc700;">  │</span>  <span style="color:#22c55e;">▌</span>  <span style="color:#a1a1aa;">  Python 3.14 · FastAPI · SSE</span>     <span style="color:#22c55e;">▐</span>  <span style="color:#ffc700;">│</span>
+<span style="color:#ffc700;">  │</span>  <span style="color:#22c55e;">▌</span>  <span style="color:#38bdf8;font-weight:bold;">  OpenCurro Backend Engine</span>     <span style="color:#22c55e;">▐</span>  <span style="color:#ffc700;">│</span>
+<span style="color:#ffc700;">  │</span>  <span style="color:#22c55e;">▌</span>  <span style="color:#a1a1aa;">  FastAPI · SSE Streaming · Sandboxes</span><span style="color:#22c55e;">▐</span>  <span style="color:#ffc700;">│</span>
 <span style="color:#ffc700;">  │</span>  <span style="color:#22c55e;">▌</span><span style="color:#3b82f6;">╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span><span style="color:#22c55e;">▐</span>  <span style="color:#ffc700;">│</span>
 <span style="color:#ffc700;">  └──────────────────────────────────────────────┘</span>
 
-  <span style="color:#22c55e;">▸</span> <span style="color:#a1a1aa;">Runtime:</span> <span style="color:#f97316;">uvicorn src.main:app</span>
-  <span style="color:#22c55e;">▸</span> <span style="color:#a1a1aa;">Port:</span> <span style="color:#f97316;">8000</span>
+  <span style="color:#22c55e;">▸</span> <span style="color:#a1a1aa;">Framework:</span> <span style="color:#38bdf8;">FastAPI 0.115+</span>
+  <span style="color:#22c55e;">▸</span> <span style="color:#a1a1aa;">Execution Loop:</span> <span style="color:#ec4899;">Autonomous Tool-Calling Thread</span>
+  <span style="color:#22c55e;">▸</span> <span style="color:#a1a1aa;">Target sandbox:</span> <span style="color:#22c55e;">Novita SDK</span>
 </pre>
 </div>
 
 ---
 
-## Architecture
+## ⚙️ Core Architecture & Execution Flow
+
+The backend of OpenCurro is a stateless, high-concurrency Python API engineered around **FastAPI** and an async **Agent loop** that manages isolated browser/sandbox runtimes.
 
 ```mermaid
 graph TB
-    subgraph API["API Layer"]
-        CHAT["/api/chat<br/>session · stream"]
-        PROV["/api/providers<br/>list · models"]
-        SANDBOX["/api/sandbox<br/>files · file-content"]
+    subgraph FastAPIEndpoints["FastAPI Router /api/*"]
+        CHAT_SESS["POST /chat/session<br/>History hydration"]
+        CHAT_STRM["POST /chat/stream<br/>Initiates SSE Loop"]
+        SAND_TREE["GET /sandbox/files<br/>Lists active directory"]
+        SAND_READ["GET /sandbox/file-content<br/>Reads targeted file"]
+        SAND_WRITE["POST /sandbox/file-content<br/>Saves modifications"]
+        PROV_LIST["GET /providers<br/>Discovers metadata"]
+        PROV_MODS["POST /providers/models<br/>Lists available models"]
     end
 
-    subgraph CORE["Core Services"]
-        AGENT["AgentRunner<br/>Main Agent Loop"]
-        SESSION["SessionStore<br/>In-Memory State"]
-        CONFIG["Config<br/>pydantic-settings"]
+    subgraph CoreEngine["Agent Orchestration Engine"]
+        AR["AgentRunner<br/>Manages chat turns"]
+        SEB["SessionEventBuffer<br/>Thread-safe event queue"]
+        SS["SessionStore<br/>In-Memory Session States"]
     end
 
-    subgraph REG["Registries"]
-        TREG["ToolRegistry<br/>9 Tools"]
-        PREG["ProviderRegistry<br/>OpenRouter · Groq · NVIDIA"]
-        SREG["SandboxRegistry<br/>Novita"]
-        SUBREG["SubAgent Registry<br/>DeepExplorer · DeepResearcher"]
+    subgraph AdaptersAndRegistries["Modular Registries"]
+        PR["ProviderRegistry<br/>OpenRouter · Groq · NVIDIA"]
+        SR["SandboxRegistry<br/>Novita Sandbox Adapter"]
+        TR["ToolRegistry<br/>Binds 9 API schemas to handlers"]
+        SAR["SubAgentRegistry<br/>Launches DeepExplorer/Researcher"]
     end
 
-    subgraph TOOLS["Tool Implementations"]
-        FR["file_read"]
-        FW["file_write"]
-        SR["str_replace"]
-        LF["list_files"]
-        SH["shall_tool"]
-        SV["shell_view"]
-        WS["web_search"]
-        FU["fatch_web_urls"]
-        CSA["call_sub_agent"]
+    subgraph ActiveSandbox["Novita Code Sandbox Runtime"]
+        DIR_ROOT["/home/user (Workspace Root)"]
+        CMD_PROC["Shell Execution Shells"]
+        FILE_SYS["Dynamic File Reader & Writer"]
     end
 
-    subgraph SUB["Sub-Agents"]
-        DE["DeepExplorer<br/>Read-only code analysis"]
-        DR["DeepResearcher<br/>Web research + file output"]
-    end
-
-    CHAT --> AGENT
-    PROV --> PREG
-    SANDBOX --> SREG
-    SANDBOX --> SESSION
-
-    AGENT --> TREG
-    AGENT --> PREG
-    AGENT --> SREG
-    AGENT --> SESSION
-    AGENT --> SUBREG
-
-    TREG --> TOOLS
-    SUBREG --> SUB
-    CSA -.->|"delegates to"| SUB
-
-    classDef api fill:#f0f9ff,stroke:#3b82f6,stroke-width:2px
-    classDef core fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
-    classDef reg fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
-    classDef tools fill:#faf5ff,stroke:#a855f7,stroke-width:2px
-    classDef sub fill:#fdf2f8,stroke:#ec4899,stroke-width:2px
-    class CHAT,PROV,SANDBOX api
-    class AGENT,SESSION,CONFIG core
-    class TREG,PREG,SREG,SUBREG reg
-    class FR,FW,SR,LF,SH,SV,WS,FU,CSA tools
-    class DE,DR sub
+    CHAT_STRM -->|1. Triggers| AR
+    AR -->|2. Instantiates| SR
+    AR -->|3. Loads Systems| PR
+    AR -->|4. Registers| TR
+    AR -->|5. Creates SSE Feed| SEB
+    SR -->|Spawns Instance| ActiveSandbox
+    TR -->|Applies Operations| ActiveSandbox
+    SAR -->|Spawns Subagent| ActiveSandbox
+    AR -->|Maintains Context| SS
 ```
 
 ---
 
-## Project Structure
+## 🔁 The Autonomous Tool-Calling Agent Loop
+
+When a request arrives at `/api/chat/stream`, the backend spawns a continuous task governed by `AgentRunner.run_agent()`. This loop executes sequentially up to the configured `MAX_ITERATION_LIMIT` (default: 1,000 steps).
+
+```mermaid
+flowchart TD
+    START(["`**Init: run_agent()**`"]) --> HYDRATE["Hydrate/Setup chat history from SessionStore"]
+    HYDRATE --> CHECK_SAND["Check or instantiate Novita Sandbox Adapter"]
+    CHECK_SAND --> CHK_PROV["Load Provider metadata and API keys"]
+
+    CHK_PROV --> LOOP_START{"`**Iteration Loop**<br/>(current < limit?)`"}
+
+    LOOP_START -->|Yes| DISPATCH_THINK["Dispatch status: thinking"]
+    DISPATCH_THINK --> REQ_COMP["Call stream_chat_completion() on LLM Provider"]
+
+    REQ_COMP --> STREAM_TOKENS["Stream text tokens & reasoning chunks via SSE"]
+    STREAM_TOKENS --> CHECK_TOOLS{"LLM requests Tool Execution?"}
+
+    CHECK_TOOLS -->|Yes| FORMAT_ASSISTANT["Append tool schema payload to session history"]
+    FORMAT_ASSISTANT --> EMIT_CALL["Emit SSE tool_call event with details"]
+    EMIT_CALL --> EXECUTE_TOOL["Execute tool in ToolRegistry (Sandbox, Web, or Sub-Agent)"]
+    EXECUTE_TOOL --> APPEND_RESULT["Append formatted Tool Result to conversation history"]
+    APPEND_RESULT --> EMIT_RESULT["Emit SSE tool_result event"]
+    APPEND_RESULT --> LOOP_START
+
+    CHECK_TOOLS -->|No| FINALIZE_MSG["Append final Assistant Message to history"]
+    FINALIZE_MSG --> EMIT_MSG_COMP["Emit SSE message_complete event"]
+    EMIT_MSG_COMP --> EMIT_DONE["Emit SSE done event"]
+    EMIT_DONE --> END_OK(["Success Terminated"])
+
+    LOOP_START -->|No| EMIT_LIMIT_ERR["Emit SSE error: Iteration limit reached"]
+    EMIT_LIMIT_ERR --> EMIT_DONE_ERR["Emit SSE done event (failed)"]
+    EMIT_DONE_ERR --> END_ERR(["Error Terminated"])
+
+    style START fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
+    style END_OK fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    style END_ERR fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+```
+
+---
+
+## 🗂️ Project Layout & Modules
 
 ```
 backend/
 ├── src/
-│   ├── main.py                        # FastAPI entry point, DI wiring, CORS
+│   ├── main.py                        # FastAPI Application Entry point & API wiring
 │   ├── core/
-│   │   └── config.py                  # Settings via pydantic-settings
-│   ├── schemas/
-│   │   ├── chat.py                    # ChatMessage, ChatStreamRequest, SSEEvent
-│   │   ├── providers.py               # ProviderType enum, ProviderMetadata, ProviderModel
-│   │   └── sandbox.py                 # SandboxSettings, FileTreeNode, ToolExecutionResult
-│   ├── api/
-│   │   ├── chat.py                    # POST /session, POST /stream (SSE)
-│   │   ├── providers.py               # GET /, POST /models
-│   │   └── sandbox.py                 # GET /files, GET|POST /file-content
-│   ├── services/
-│   │   └── session_store.py           # In-memory ChatSessionState storage
-│   ├── agents/
-│   │   ├── agent.py                   # AgentRunner — main agent loop with SSE
-│   │   ├── providers/
-│   │   │   ├── base.py                # LLMProvider protocol + ProviderStreamDelta
-│   │   │   ├── openai_compatible.py   # OpenAI-compatible implementation
-│   │   │   └── registry.py            # ProviderRegistry (3 providers)
-│   │   ├── sandbox/
-│   │   │   ├── base.py                # SandboxAdapter protocol + SandboxContext
-│   │   │   ├── novita.py              # Novita sandbox implementation
-│   │   │   └── registry.py            # SandboxRegistry
-│   │   ├── tools/
-│   │   │   ├── registry.py            # ToolRegistry — schema + handler registration
-│   │   │   ├── file_read.py           # Read file from sandbox
-│   │   │   ├── file_write.py          # Create/overwrite files
-│   │   │   ├── str_replace.py         # Exact string replacement
-│   │   │   ├── list_files.py          # List directory contents
-│   │   │   ├── shall_tool.py          # Shell command execution
-│   │   │   ├── shell_view.py          # Background command output viewer
-│   │   │   ├── web_search_tool.py     # Web search via Tavily
-│   │   │   ├── fatch_web_urls.py      # Web page fetch via Firecrawl
-│   │   │   └── call_sub_agent.py      # Delegate to sub-agent
-│   │   ├── subagents/
-│   │   │   ├── __init__.py            # Sub-agent registry
-│   │   │   ├── deepexplorer/          # Read-only code exploration agent
-│   │   │   └── deepresearcher/        # Web research + file output agent
-│   │   └── systemprompts/
-│   │       └── systemprompt.py        # Main agent system prompt
-│   └── tests/
-│       ├── test_paths.py              # Sandbox path validation tests
-│       └── test_tools.py              # Tool execution unit tests
-├── requirements.txt                   # Python dependencies
-└── logs/
-    └── backend.log                    # Application logs
+│   │   └── config.py                  # Environment parsing via pydantic-settings
+│   ├── schemas/                       # Pydantic data schemas
+│   │   ├── chat.py                    # Session setup & SSE message protocols
+│   │   ├── providers.py               # Metadata representations for LLM models
+│   │   └── sandbox.py                 # File node trees, settings & sandbox metrics
+│   ├── api/                           # Endpoint controllers
+│   │   ├── chat.py                    # Orchestrates session and live SSE streams
+│   │   ├── providers.py               # Discovers and queries LLM provider catalogs
+│   │   └── sandbox.py                 # Direct APIs for tree browsing and manual edits
+│   ├── services/                      # Session management utilities
+│   │   ├── event_buffer.py            # Event queue for multi-client stream caching
+│   │   └── session_store.py           # In-memory transient session maps
+│   ├── agents/                        # Autonomous systems directory
+│   │   ├── agent.py                   # Main AgentRunner tool execution engine
+│   │   ├── providers/                 # LLM Interfaces
+│   │   │   ├── base.py                # Abstract LLMProvider Python Protocol
+│   │   │   ├── openai_compatible.py   # General OpenAI adapter (OpenRouter, Groq, NVIDIA)
+│   │   │   └── registry.py            # Static list of registered provider definitions
+│   │   ├── sandbox/                   # Virtual Sandbox systems
+│   │   │   ├── base.py                # Abstract SandboxAdapter Python Protocol
+│   │   │   ├── novita.py              # Implementation binding to the novita-sandbox SDK
+│   │   │   └── registry.py            # List of active execution engines
+│   │   ├── tools/                     # Code tools implementations
+│   │   │   ├── registry.py            # Mapping and validation of standard schemas to python executables
+│   │   │   ├── file_read.py           # Reads targeted absolute files
+│   │   │   ├── file_write.py          # Safely outputs dynamic file content
+│   │   │   ├── str_replace.py         # Executes precise matching string edits
+│   │   │   ├── list_files.py          # Formats folder directory indexes
+│   │   │   ├── shall_tool.py          # Runs background or foreground terminal operations
+│   │   │   ├── shell_view.py          # Fetches buffers of active background threads
+│   │   │   ├── web_search_tool.py     # Executes web discovery queries using Tavily
+│   │   │   ├── fatch_web_urls.py      # Extracts clean markdown representations via Firecrawl
+│   │   │   └── call_sub_agent.py      # Sub-Agent runner utility
+│   │   └── subagents/                 # Deep sub-agents
+│   │       ├── __init__.py            # Main subagent registration and metadata store
+│   │       ├── deepexplorer/          # Read-only explorer agent loop
+│   │       └── deepresearcher/        # Web and script execution research loop
+│   └── tests/                         # Test directory
+│       ├── test_paths.py              # Unit tests for sandbox path containment
+│       └── test_tools.py              # Mock tests for file operations and shell tools
+└── requirements.txt                   # Third-party requirements and SDKs
 ```
 
 ---
 
-## Agent Loop
+## 📡 API Endpoints Spec
 
-```mermaid
-flowchart TD
-    START(["`**stream_turn()**`"]) --> SETUP["Session setup<br/>Create or hydrate"]
-    SETUP --> CREATE["Create sandbox<br/>(if not exists)"]
-    CREATE --> LOOP{`Iteration &lt;<br/>max_iterations?`}
+### Chat Operations
 
-    LOOP -->|Yes| THINK["Stream LLM completion<br/>tokens + reasoning"]
-    THINK --> TOOL{"Has tool_calls<br/>or finish_reason<br/>= tool_calls?"}
+#### `POST /api/chat/session`
+Synchronizes the local user chat state with the backend memory space.
+- **Request (JSON)**:
+  ```json
+  {
+    "chat_id": "session-unique-uuid-1234",
+    "history": [
+      { "role": "user", "content": "How are you?" },
+      { "role": "assistant", "content": "I am ready." }
+    ]
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "chat_id": "session-unique-uuid-1234",
+    "message_count": 2,
+    "has_sandbox": false
+  }
+  ```
 
-    TOOL -->|Yes| EXEC["Execute tool<br/>(sandbox / web / sub-agent)"]
-    EXEC --> RESULT["Append tool result<br/>to session history"]
-    RESULT --> LOOP
-
-    TOOL -->|No| DONE["Finalize message<br/>yield message_complete"]
-    DONE --> END(["yield done"])
-
-    LOOP -->|No| LIMIT["yield error<br/>iteration_limit_reached"]
-    LIMIT --> END
-
-    START -.->|error| ER["yield error + done"]
-
-    style START fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
-    style END fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
-    style ER fill:#fef2f2,stroke:#ef4444,stroke-width:2px
-```
+#### `POST /api/chat/stream`
+Dispatches the user's latest message, boots or binds to the sandbox, starts the AgentRunner loop, and yields a real-time Server-Sent Events stream.
+- **Request (JSON)**: Refer to `ChatStreamRequest` in `src/schemas/chat.py`.
+- **Response**: `text/event-stream` format.
 
 ---
 
-## Schemas
+### Sandbox Management
 
-### `ChatStreamRequest`
+#### `GET /api/sandbox/files`
+Traverses the sandboxed files starting at the target root.
+- **Query Params**:
+  - `chat_id`: Unique identifier
+  - `path`: Absolute directory location (e.g., `/home/user`)
+  - `depth`: Depth ceiling (1 to 8, defaults to 4)
+- **Response**: `SandboxFilesResponse` model displaying the file tree structure.
 
-| Field | Type | Description |
+#### `GET /api/sandbox/file-content`
+Reads file contents directly.
+- **Query Params**: `chat_id`, `path`
+- **Response**:
+  ```json
+  {
+    "path": "/home/user/project/main.py",
+    "content": "print('hello world!')"
+  }
+  ```
+
+#### `POST /api/sandbox/file-content`
+Directly writes file contents. Useful for manual edits by the user in the UI panel.
+- **Request (JSON)**:
+  ```json
+  {
+    "chat_id": "session-unique-uuid-1234",
+    "path": "/home/user/project/main.py",
+    "content": "print('updated!')"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "path": "/home/user/project/main.py",
+    "ok": true
+  }
+  ```
+
+---
+
+## 📡 SSE Stream Event Protocol
+
+Every event payload streamed via Server-Sent Events contains standard JSON objects. The following table describes the payload definitions:
+
+| Event Type | Field Definitions | When is it emitted? |
 |---|---|---|
-| `chat_id` | `string` | Unique chat session ID |
-| `user_message` | `string` | User message content |
-| `history` | `ChatMessage[]` | Previous conversation history |
-| `provider` | `ProviderType` | LLM provider (`openrouter`, `groq`, `nvidia`) |
-| `model` | `string` | Model identifier |
-| `api_key` | `string` | Provider API key |
-| `base_url` | `string?` | Custom base URL |
-| `sandbox` | `SandboxSettings` | Sandbox configuration |
-| `max_iterations` | `int` | Max agent loop iterations (default 1000) |
-| `tavily_api_key` | `string?` | Tavily web search key |
-| `firecrawl_api_key` | `string?` | Firecrawl web fetch key |
-
-### `SandboxSettings`
-
-| Field | Type | Description |
-|---|---|---|
-| `api_key` | `string` | Novita API key |
-| `template_id` | `string?` | Optional sandbox template ID |
-| `provider` | `"novita"` | Sandbox provider |
-| `timeout_seconds` | `int` | Sandbox timeout (default 3600) |
-
-### `ToolExecutionResult`
-
-| Field | Type | Description |
-|---|---|---|
-| `ok` | `bool` | Whether execution succeeded |
-| `data` | `any?` | Result data (if successful) |
-| `error` | `dict?` | Error info (if failed) |
+| `status` | `{"state": "thinking" \| "executing" \| ..., "label": "Label text"}` | Updates the user on loop execution state. |
+| `iteration`| `{"current": 1, "limit": 1000}` | Dispatched at the start of every model turn. |
+| `sandbox` | `{"sandbox_id": "sb_123", "provider": "novita", "root_path": "/home/user"}`| Emitted when a new sandbox environment is provisioned. |
+| `token` | `{"value": "text_segment"}` | Immediate output segment from the LLM response. |
+| `reasoning`| `{"value": "thinking_segment"}` | Output segment containing raw reasoning chains. |
+| `tool_call`| `{"name": "shall_tool", "command": "npm test", "label": "Terminal: npm test"}`| Fired immediately prior to initiating a tool execution handler. |
+| `tool_result`| `{"name": "shall_tool", "ok": true, "result": {...}}` | Returns the raw results or execution errors from a tool. |
+| `subagent_start` | `{"session": "sub_id", "agent": "deepresearcher"}` | Fired when the agent spawns an active sub-agent loop. |
+| `subagent_token` | `{"session": "sub_id", "value": "text_token"}` | Raw token from the running sub-agent response thread. |
+| `subagent_complete` | `{"session": "sub_id"}` | Emitted when a sub-agent exits successfully. |
+| `message_complete` | `{"content": "Full text", "iteration_count": 3}` | Aggregated response summarizing the final answer. |
+| `error` | `{"message": "Error details", "code": "code_slug"}` | Emitted on catastrophic loop errors. |
+| `done` | `{"ok": true}` | Terminating marker of the stream. |
 
 ---
 
-## SSE Event Types
+## 🔒 Security & Path Validation Safeguards
 
-All streaming responses use Server-Sent Events with the following format:
-
-```
-event: <event_type>
-data: <json_payload>
-```
-
-| Event | Payload | Description |
-|---|---|---|
-| `status` | `{ state, label }` | Lifecycle update |
-| `iteration` | `{ current, limit }` | Agent loop progress |
-| `sandbox` | `{ sandbox_id, provider, root_path }` | Sandbox created |
-| `token` | `{ value }` | LLM response token |
-| `reasoning` | `{ value }` | LLM reasoning token |
-| `tool_call` | `{ name, file_path?, command?, ... }` | Tool being invoked |
-| `tool_result` | `{ name, file_path?, ok, result }` | Tool execution result |
-| `subagent_start` | `{ session, agent }` | Sub-agent started |
-| `subagent_token` | `{ session, value }` | Sub-agent token |
-| `subagent_tool_call` | `{ session, name, ... }` | Sub-agent tool call |
-| `subagent_tool_result` | `{ session, name, ok, result }` | Sub-agent tool result |
-| `subagent_complete` | `{ session }` | Sub-agent finished |
-| `subagent_error` | `{ session, message }` | Sub-agent error |
-| `message_complete` | `{ content, iteration_count, reasoning? }` | Final response |
-| `error` | `{ message, code }` | Error occurred |
-| `done` | `{ ok }` | Turn complete |
-
----
-
-## Tool Implementations
-
-All tools follow the same pattern — they export a `TOOL_SCHEMA` (JSON schema for the LLM) and an `execute_*` handler function:
-
-| File | Tool Name | Schema Key | Handler |
-|---|---|---|---|
-| `tools/file_read.py` | `file_read` | `FILE_READ_TOOL_SCHEMA` | `execute_file_read` |
-| `tools/file_write.py` | `file_write` | `FILE_WRITE_TOOL_SCHEMA` | `execute_file_write` |
-| `tools/str_replace.py` | `str_replace` | `STR_REPLACE_TOOL_SCHEMA` | `execute_str_replace` |
-| `tools/list_files.py` | `list_files` | `LIST_FILES_TOOL_SCHEMA` | `execute_list_files` |
-| `tools/shall_tool.py` | `shall_tool` | `SHALL_TOOL_SCHEMA` | `execute_shall_tool` |
-| `tools/shell_view.py` | `shell_view` | `SHELL_VIEW_TOOL_SCHEMA` | `execute_shell_view` |
-| `tools/web_search_tool.py` | `web_search` | `WEB_SEARCH_TOOL_SCHEMA` | `execute_web_search` |
-| `tools/fatch_web_urls.py` | `fatch_web_urls` | `FETCH_WEB_URLS_TOOL_SCHEMA` | `execute_fatch_web_urls` |
-| `tools/call_sub_agent.py` | `call_sub_agent` | `CALL_SUB_AGENT_TOOL_SCHEMA` | `execute_call_sub_agent` |
-
----
-
-## Sub-Agents
-
-### DeepExplorer (`subagents/deepexplorer/`)
-- **Purpose**: Read-only code exploration and analysis
-- **Allowed tools**: `list_files`, `file_read`
-- **Use case**: Understanding code structure, reading files, answering questions about code
-
-### DeepResearcher (`subagents/deepresearcher/`)
-- **Purpose**: Web research with file output capabilities
-- **Allowed tools**: `web_search`, `fatch_web_urls`, `file_write`, `list_files`, `shall_tool`
-- **Use case**: Researching topics and writing results to files
-
----
-
-## Provider Abstraction
-
-```mermaid
-graph LR
-    subgraph LLM Providers
-        OR["OpenRouter<br/>openrouter.ai/api/v1"]
-        GQ["Groq<br/>api.groq.com/openai/v1"]
-        NV["NVIDIA NIM<br/>integrate.api.nvidia.com/v1"]
-    end
-
-    subgraph Protocol["LLMProvider Protocol"]
-        LM["list_models()"]
-        SC["stream_chat_completion()"]
-    end
-
-    subgraph Impl["OpenAICompatibleProvider"]
-        API["HTTP API calls<br/>(httpx async)"]
-        PARSE["SSE stream parser"]
-    end
-
-    OR --> Impl
-    GQ --> Impl
-    NV --> Impl
-    Impl -.->|"implements"| Protocol
-
-    style Protocol fill:#f0fdf4,stroke:#22c55e,stroke-width:2px,stroke-dasharray: 6 3
-    style Impl fill:#faf5ff,stroke:#a855f7,stroke-width:2px
-```
-
----
-
-## Sandbox Abstraction
-
-```mermaid
-graph LR
-    subgraph SB["SandboxAdapter Protocol"]
-        CREATE["create()"]
-        READ["read_file()"]
-        WRITE["write_file()"]
-        TREE["list_tree()"]
-        INFO["get_info()"]
-        CMD["run_command()"]
-        DISPOSE["dispose()"]
-    end
-
-    subgraph NOV["NovitaSandboxAdapter"]
-        SDK["novita-sandbox SDK"]
-        PATH["normalize_sandbox_path()"]
-    end
-
-    NOV -.->|"implements"| SB
-
-    style SB fill:#f0fdf4,stroke:#22c55e,stroke-width:2px,stroke-dasharray: 6 3
-    style NOV fill:#faf5ff,stroke:#a855f7,stroke-width:2px
-```
-
----
-
-## Testing
-
-```bash
-# Run all tests
-pytest src/tests/ -v
-
-# Run specific test file
-pytest src/tests/test_tools.py -v
-pytest src/tests/test_paths.py -v
-```
-
----
-
-## Dependencies
-
-```
-fastapi          Web framework
-uvicorn          ASGI server
-python-dotenv    Environment management
-pydantic         Schema validation
-pydantic-settings  Settings management
-httpx            Async HTTP client
-novita-sandbox   Novita sandbox SDK
-tavily-python    Web search API
-firecrawl-py     Web fetch API
-pytest           Testing
-pytest-asyncio   Async test support
-```
-
----
-
-## Key Design Patterns
-
-### Registry Pattern
-All extensible components implement a registry:
+To prevent agents from executing commands or writing files in insecure directory paths within the sandbox, the adapter applies strict path validation.
 
 ```python
-# provider_registry.py
-class ProviderRegistry:
-    _providers: dict[ProviderType, LLMProvider]
+# src/agents/sandbox/base.py
 
-# tool_registry.py
-class ToolRegistry:
-    _schemas: list[dict]
-    _handlers: dict[str, callable]
-
-# subagents/__init__.py
-SUBAGENT_REGISTRY: dict[str, dict]
-```
-
-### Protocol-based Abstraction
-Strong typing without coupling:
-
-```python
-class LLMProvider(Protocol):
-    async def stream_chat_completion(...) -> AsyncGenerator[ProviderStreamDelta, None]: ...
-
-class SandboxAdapter(Protocol):
-    async def read_file(self, context: SandboxContext, file_path: str) -> str: ...
-```
-
-### Path Safety
-All sandbox paths are validated:
-
-```python
 def normalize_sandbox_path(file_path: str, root_path: str = "/home/user") -> str:
+    root = PurePosixPath(root_path)
     path = PurePosixPath(file_path)
+
+    # Path must be absolute and contain root
     if not path.is_absolute():
         raise ValueError("Path must be absolute.")
-    if root not in path.parents:
-        raise ValueError(f"Path must stay inside {root_path}.")
+
+    if root not in path.parents and path != root:
+        raise ValueError(f"Path must stay inside sandbox root directory: {root_path}")
+
     return str(path)
 ```
 
----
-
-## Configuration
-
-| Environment Variable | Default | Description |
-|---|---|---|
-| `APP_NAME` | `Novita Agent Studio API` | App display name |
-| `API_PREFIX` | `/api` | API URL prefix |
-| `CORS_ORIGINS` | `["*"]` | Allowed CORS origins |
-| `MAX_ITERATION_LIMIT` | `1000` | Max agent iterations |
-| `SANDBOX_ROOT_PATH` | `/home/user` | Sandbox filesystem root |
-| `DEFAULT_SANDBOX_TIMEOUT_SECONDS` | `3600` | Sandbox idle timeout |
-| `TAVILY_API_KEY` | `""` | Tavily search API key |
-| `FIRECRAWL_API_KEY` | `""` | Firecrawl fetch API key |
+The validation layer forces:
+1. **Absolute Path Declarations**: Any path parameter passed to file read or edit tools must start with `/`.
+2. **Strict Root Containment**: Path queries are checked against parent chains to prevent directory traversal exploits (e.g., `/home/user/../../etc/passwd`).
 
 ---
 
-## API Endpoints
+## 🧪 Quick Sandbox Verification
 
-### `GET /health`
-Health check endpoint.
+Run the test suite to verify that path security and tool structures operate correctly on your host environment:
 
-### `POST /api/chat/session`
-Create or hydrate a chat session in the in-memory store.
+```bash
+# Ensure virtualenv is active
+source venv/bin/activate
 
-### `POST /api/chat/stream`
-Send a user message and receive an SSE stream of agent activity.
-
-### `GET /api/providers`
-List supported LLM providers (OpenRouter, Groq, NVIDIA NIM).
-
-### `POST /api/providers/models`
-Fetch available models for a given provider.
-
-### `GET /api/sandbox/files`
-Get the sandbox file tree (JSON structure).
-
-### `GET /api/sandbox/file-content`
-Read a file from the sandbox.
-
-### `POST /api/sandbox/file-content`
-Write a file in the sandbox.
-
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant B as Backend
-    participant S as Sandbox
-    participant P as LLM Provider
-    participant W as Web APIs
-
-    C->>B: POST /api/chat/session { chat_id, history }
-    B->>B: Upsert session
-    B-->>C: { chat_id, message_count, has_sandbox }
-
-    C->>B: POST /api/chat/stream { ... }
-    B->>B: Create/get sandbox
-    B-->>C: SSE: sandbox { sandbox_id, ... }
-    B->>P: stream_chat_completion()
-    P-->>B: tokens + tool_calls
-    B-->>C: SSE: token, reasoning, tool_call
-    B->>S: Execute sandbox tool
-    S-->>B: Tool result
-    B-->>C: SSE: tool_result
-    B->>W: web_search / fatch_web_urls
-    W-->>B: Results
-    B-->>C: SSE: message_complete + done
+# Execute tests with pytest
+pytest src/tests/ -v
 ```
+
+This tests:
+1. Safe directory constraints under `/home/user`.
+2. Error containment when a tool tries to read a missing file.
+3. Proper formatting of sandbox operations.
