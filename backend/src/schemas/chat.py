@@ -34,16 +34,17 @@ class ChatSessionResponse(BaseModel):
 
 class ChatStreamRequest(BaseModel):
     chat_id: str = Field(min_length=1)
-    user_message: str = Field(min_length=1)
+    user_message: str | None = None
     history: list[ChatMessage] = Field(default_factory=list)
-    provider: ProviderType
-    model: str = Field(min_length=1)
-    api_key: str = Field(min_length=1)
-    base_url: Optional[str] = None
-    sandbox: SandboxSettings
+    provider: ProviderType | None = None
+    model: str | None = None
+    api_key: str | None = None
+    base_url: str | None = None
+    sandbox: SandboxSettings | None = None
     max_iterations: int = Field(default=1000, ge=1, le=1000)
-    tavily_api_key: Optional[str] = None
-    firecrawl_api_key: Optional[str] = None
+    tavily_api_key: str | None = None
+    firecrawl_api_key: str | None = None
+    since_event_id: int = Field(default=-1)
 
 
 class SSEEvent(BaseModel):

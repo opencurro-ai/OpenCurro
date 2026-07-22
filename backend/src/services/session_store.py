@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Optional
@@ -14,6 +15,8 @@ class ChatSessionState:
     sandbox_context: Optional[Any] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
+    event_buffer: Optional[Any] = None
+    agent_task: Optional[asyncio.Task] = None
 
     def hydrate(self, history: list[ChatMessage]) -> None:
         if history:

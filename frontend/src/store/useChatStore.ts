@@ -26,9 +26,11 @@ interface ChatState {
   statusLabel: string
   iterationCurrent: number
   iterationLimit: number
+  lastEventId: Record<string, number>
   setStatusLabel: (value: string) => void
   setStreaming: (value: boolean) => void
   setIteration: (current: number, limit: number) => void
+  setLastEventId: (chatId: string, eventId: number) => void
   createChat: () => string
   deleteChat: (chatId: string) => void
   setActiveChat: (chatId: string) => void
@@ -59,9 +61,11 @@ export const useChatStore = create<ChatState>()(
       statusLabel: 'Ready',
       iterationCurrent: 0,
       iterationLimit: 1000,
+      lastEventId: {},
       setStatusLabel: (value) => set({ statusLabel: value }),
       setStreaming: (value) => set({ isStreaming: value }),
       setIteration: (current, limit) => set({ iterationCurrent: current, iterationLimit: limit }),
+      setLastEventId: (chatId, eventId) => set((state) => ({ lastEventId: { ...state.lastEventId, [chatId]: eventId } })),
       createChat: () => {
         const chat = createEmptyChat()
         set((state) => ({ chats: [chat, ...state.chats], activeChatId: chat.id }))
@@ -286,6 +290,8 @@ export const useChatStore = create<ChatState>()(
       partialize: (state) => ({
         chats: state.chats,
         activeChatId: state.activeChatId,
+        isStreaming: state.isStreaming,
+        lastEventId: state.lastEventId,
       }),
     },
   ),

@@ -5,21 +5,27 @@ import type { SandboxFilesResponse } from '@/types/sandbox'
 
 export interface StreamChatPayload {
   chat_id: string
-  user_message: string
-  history: BackendMessage[]
-  provider: ProviderId
-  model: string
-  api_key: string
+  user_message?: string
+  history?: BackendMessage[]
+  provider?: ProviderId
+  model?: string
+  api_key?: string
   base_url?: string
-  sandbox: {
+  sandbox?: {
     api_key: string
     template_id?: string
     provider: 'novita'
     timeout_seconds: number
   }
-  max_iterations: number
+  max_iterations?: number
   tavily_api_key?: string
   firecrawl_api_key?: string
+  since_event_id?: number
+}
+
+export interface StreamConnection {
+  abort: () => void
+  promise: Promise<void>
 }
 
 export async function fetchProviders(): Promise<ProviderMetadata[]> {
@@ -84,51 +90,105 @@ export async function saveSandboxFileContent(chatId: string, filePath: string, c
   }
 }
 
-export async function streamChat(payload: StreamChatPayload, onChunk: (event: string, data: Record<string, unknown>) => void): Promise<void> {
-  const response = await fetch(`${env.backendUrl}/api/chat/stream`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
+export function streamChat(
+  payload: StreamChatPayload,
+  onChunk: (event: string, data: Record<string, unknown>) => void,
+  onEventId?: (eventId: number) => void,
+): StreamConnection {
+  let aborted = false
+  let lastEventId = payload.since_event_id ?? -1
+  const abortController = new AbortController()
 
-  if (!response.ok || !response.body) {
-    throw new Error('Chat stream failed to start.')
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  const connect = async (): Promise<void> => {
+    let retryDelay = 500
+
+    while (!aborted) {
+      try {
+        const modifiedPayload = { ...payload, since_event_id: lastEventId }
+        const response = await fetch(`${env.backendUrl}/api/chat/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(modifiedPayload),
+          signal: abortController.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.status}`)
+        }
+
+        if (!response.body) {
+          throw new Error('Response body is null')
+        }
+
+        retryDelay = 500
+
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const events = buffer.split('\n\n')
+          buffer = events.pop() ?? ''
+
+          for (const rawEvent of events) {
+            const lines = rawEvent.split('\n')
+            let eventName = 'message'
+            const dataLines: string[] = []
+
+            for (const line of lines) {
+              if (line.startsWith('event:')) {
+                eventName = line.slice(6).trim()
+              }
+              if (line.startsWith('data:')) {
+                dataLines.push(line.slice(5).trim())
+              }
+            }
+
+            if (!dataLines.length) continue
+
+            const parsedData = JSON.parse(dataLines.join('\n')) as Record<string, unknown>
+
+            if (typeof parsedData._event_id === 'number') {
+              lastEventId = parsedData._event_id
+              delete parsedData._event_id
+              onEventId?.(lastEventId)
+            }
+
+            onChunk(eventName, parsedData)
+          }
+        }
+
+        return
+      } catch (err) {
+        if (aborted || abortController.signal.aborted) return
+
+        if (err instanceof TypeError || (err instanceof Error && (err.message.includes('network') || err.message.includes('fetch') || err.message.includes('Server error')))) {
+          await sleep(retryDelay)
+          retryDelay = Math.min(retryDelay * 2, 15000)
+          continue
+        }
+
+        throw err
+      }
+    }
   }
 
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
+  const promise = connect().catch((err) => {
+    if (aborted || abortController.signal.aborted) return
+    throw err
+  })
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) {
-      break
-    }
-
-    buffer += decoder.decode(value, { stream: true })
-    const events = buffer.split('\n\n')
-    buffer = events.pop() ?? ''
-
-    for (const rawEvent of events) {
-      const lines = rawEvent.split('\n')
-      let eventName = 'message'
-      const dataLines: string[] = []
-
-      for (const line of lines) {
-        if (line.startsWith('event:')) {
-          eventName = line.slice(6).trim()
-        }
-        if (line.startsWith('data:')) {
-          dataLines.push(line.slice(5).trim())
-        }
-      }
-
-      if (!dataLines.length) {
-        continue
-      }
-
-      const payload = JSON.parse(dataLines.join('\n')) as Record<string, unknown>
-      onChunk(eventName, payload)
-    }
+  return {
+    abort: () => {
+      aborted = true
+      abortController.abort()
+    },
+    promise,
   }
 }

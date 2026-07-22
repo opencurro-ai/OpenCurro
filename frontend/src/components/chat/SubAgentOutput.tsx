@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Bot, FolderOpen, Terminal, Eye, X } from 'lucide-react'
+import { Bot, FolderOpen, Terminal, X } from 'lucide-react'
 
 import type { SubAgentChip, ToolChip } from '@/types/chat'
 

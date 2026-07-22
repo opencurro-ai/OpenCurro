@@ -1,242 +1,250 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 import { ensureChatSession, streamChat } from '@/lib/api'
+import type { StreamConnection } from '@/lib/api'
 import { useChatStore } from '@/store/useChatStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
 import { createId } from '@/utils/id'
 
 export function useAgentChat() {
-  const {
-    chats,
-    activeChatId,
-    addUserMessage,
-    addEvent,
-    addToolChip,
-    updateLastToolChip,
-    addSubAgentChip,
-    appendSubAgentToken,
-    addSubAgentToolChip,
-    updateLastSubAgentToolChip,
-    updateSubAgentStatus,
-    appendAssistantToken,
-    appendAssistantReasoning,
-    finalizeAssistantMessage,
-    markAssistantError,
-    setIteration,
-    setSandboxInfo,
-    setStatusLabel,
-    setStreaming,
-    startAssistantMessage,
-  } = useChatStore()
-  const { providerKeys, providerBaseUrls, selectedModel, selectedProvider, novitaApiKey, novitaTemplateId, tavilyApiKey, firecrawlApiKey } = useSettingsStore()
+  const store = useChatStore()
+  const settings = useSettingsStore()
+
+  const connectionRef = useRef<StreamConnection | null>(null)
+
+  const makeHandler = useCallback(
+    (chatId: string) => {
+      return (event: string, data: Record<string, unknown>) => {
+        store.addEvent(chatId, { type: event, data })
+        if (event === 'status') {
+          const label = typeof data.label === 'string' ? data.label : 'Working...'
+          store.setStatusLabel(label)
+        }
+        if (event === 'iteration') {
+          const current = typeof data.current === 'number' ? data.current : 0
+          const limit = typeof data.limit === 'number' ? data.limit : 1000
+          store.setIteration(current, limit)
+        }
+        if (event === 'sandbox') {
+          const sandboxId = typeof data.sandbox_id === 'string' ? data.sandbox_id : ''
+          const provider = typeof data.provider === 'string' ? data.provider : 'novita'
+          const rootPath = typeof data.root_path === 'string' ? data.root_path : '/home/user'
+          store.setSandboxInfo(chatId, { sandboxId, provider, rootPath })
+          store.setStatusLabel('Thinking...')
+        }
+        if (event === 'tool_call') {
+          const dataSessionNames = data.session_names
+          const sessionNames = Array.isArray(dataSessionNames) ? dataSessionNames.filter((s: unknown): s is string => typeof s === 'string') : undefined
+          store.addToolChip(chatId, {
+            id: createId('tool'),
+            name: typeof data.name === 'string' ? data.name : 'tool',
+            label: typeof data.label === 'string' ? data.label : 'Tool activity',
+            filePath: typeof data.file_path === 'string' ? data.file_path : undefined,
+            command: typeof data.command === 'string' ? data.command : undefined,
+            sessionName: typeof data.session_name === 'string' && data.session_name ? data.session_name : 'default',
+            sessionNames,
+            path: typeof data.path === 'string' ? data.path : undefined,
+            query: typeof data.query === 'string' ? data.query : undefined,
+            url: typeof data.url === 'string' ? data.url : undefined,
+            oldString: typeof data.old_string === 'string' ? data.old_string : undefined,
+            newString: typeof data.new_string === 'string' ? data.new_string : undefined,
+          })
+        }
+        if (event === 'tool_result') {
+          store.updateLastToolChip(chatId, {
+            ok: typeof data.ok === 'boolean' ? data.ok : undefined,
+            resultData: typeof data.result === 'object' && data.result !== null ? data.result as Record<string, unknown> : undefined,
+          })
+        }
+        if (event === 'subagent_start') {
+          const session = typeof data.session === 'string' ? data.session : 'default'
+          const agent = typeof data.agent === 'string' ? data.agent : 'agent'
+          store.addSubAgentChip(chatId, {
+            id: createId('subagent'),
+            session,
+            agent,
+            output: '',
+            toolChips: [],
+            status: 'running',
+          })
+        }
+        if (event === 'subagent_token') {
+          const session = typeof data.session === 'string' ? data.session : 'default'
+          const token = typeof data.value === 'string' ? data.value : ''
+          store.appendSubAgentToken(chatId, session, token)
+        }
+        if (event === 'subagent_tool_call') {
+          const session = typeof data.session === 'string' ? data.session : 'default'
+          const dataSessionNames = data.session_names
+          const sessionNames = Array.isArray(dataSessionNames) ? dataSessionNames.filter((s: unknown): s is string => typeof s === 'string') : undefined
+          store.addSubAgentToolChip(chatId, session, {
+            id: createId('tool'),
+            name: typeof data.name === 'string' ? data.name : 'tool',
+            label: typeof data.label === 'string' ? data.label : 'Tool activity',
+            filePath: typeof data.file_path === 'string' ? data.file_path : undefined,
+            command: typeof data.command === 'string' ? data.command : undefined,
+            sessionName: typeof data.session_name === 'string' && data.session_name ? data.session_name : 'default',
+            sessionNames,
+            path: typeof data.path === 'string' ? data.path : undefined,
+            query: typeof data.query === 'string' ? data.query : undefined,
+            url: typeof data.url === 'string' ? data.url : undefined,
+            oldString: typeof data.old_string === 'string' ? data.old_string : undefined,
+            newString: typeof data.new_string === 'string' ? data.new_string : undefined,
+          })
+        }
+        if (event === 'subagent_tool_result') {
+          const session = typeof data.session === 'string' ? data.session : 'default'
+          store.updateLastSubAgentToolChip(chatId, session, {
+            ok: typeof data.ok === 'boolean' ? data.ok : undefined,
+            resultData: typeof data.result === 'object' && data.result !== null ? data.result as Record<string, unknown> : undefined,
+          })
+        }
+        if (event === 'subagent_complete') {
+          const session = typeof data.session === 'string' ? data.session : 'default'
+          store.updateSubAgentStatus(chatId, session, 'completed')
+        }
+        if (event === 'subagent_error') {
+          const session = typeof data.session === 'string' ? data.session : 'default'
+          const message = typeof data.message === 'string' ? data.message : 'Sub-agent error'
+          store.updateSubAgentStatus(chatId, session, 'error', message)
+        }
+        if (event === 'reasoning') {
+          const token = typeof data.value === 'string' ? data.value : ''
+          store.appendAssistantReasoning(chatId, token)
+        }
+        if (event === 'token') {
+          const token = typeof data.value === 'string' ? data.value : ''
+          store.appendAssistantToken(chatId, token)
+        }
+        if (event === 'message_complete') {
+          const finalContent = typeof data.content === 'string' ? data.content : ''
+          const finalReasoning = typeof data.reasoning === 'string' ? data.reasoning : undefined
+          store.finalizeAssistantMessage(chatId, finalContent, finalReasoning)
+          store.setStatusLabel('Ready')
+        }
+        if (event === 'error') {
+          const message = typeof data.message === 'string' ? data.message : 'Unknown error'
+          store.markAssistantError(chatId, message)
+          store.setStatusLabel('Issue detected')
+        }
+        if (event === 'done') {
+          store.setStreaming(false)
+          store.setStatusLabel('Ready')
+        }
+      }
+    },
+    [store],
+  )
+
+  const getStreamPayload = useCallback(
+    (chatId: string, userMessage?: string, history?: Array<{ role: 'system' | 'user' | 'assistant' | 'tool'; content?: string | null; timestamp?: string }>, sinceEventId?: number) => ({
+      chat_id: chatId,
+      user_message: userMessage,
+      history,
+      provider: settings.selectedProvider,
+      model: settings.selectedModel,
+      api_key: settings.providerKeys[settings.selectedProvider],
+      base_url: settings.providerBaseUrls[settings.selectedProvider],
+      sandbox: {
+        api_key: settings.novitaApiKey,
+        template_id: settings.novitaTemplateId || undefined,
+        provider: 'novita' as const,
+        timeout_seconds: 3600,
+      },
+      max_iterations: 1000,
+      tavily_api_key: settings.tavilyApiKey || undefined,
+      firecrawl_api_key: settings.firecrawlApiKey || undefined,
+      since_event_id: sinceEventId,
+    }),
+    [settings],
+  )
+
+  useEffect(() => {
+    if (store.isStreaming && store.activeChatId) {
+      const chatId = store.activeChatId
+      const handler = makeHandler(chatId)
+      const sinceId = store.lastEventId[chatId] ?? -1
+      const payload = getStreamPayload(chatId, undefined, undefined, sinceId)
+
+      const conn = streamChat(
+        payload,
+        handler,
+        (eventId) => store.setLastEventId(chatId, eventId),
+      )
+      connectionRef.current = conn
+    }
+
+    return () => {
+      if (connectionRef.current) {
+        connectionRef.current.abort()
+        connectionRef.current = null
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const sendMessage = useCallback(async (content: string) => {
-    const chatId = activeChatId || chats[0]?.id
+    const chatId = store.activeChatId || store.chats[0]?.id
     if (!chatId) {
       throw new Error('No active chat available.')
     }
-    if (!selectedModel) {
+    if (!settings.selectedModel) {
       throw new Error('Select a model first.')
     }
-    const providerKey = providerKeys[selectedProvider]
+    const providerKey = settings.providerKeys[settings.selectedProvider]
     if (!providerKey) {
-      throw new Error(`Add a ${selectedProvider} API key first.`)
+      throw new Error(`Add a ${settings.selectedProvider} API key first.`)
     }
-    if (!novitaApiKey) {
+    if (!settings.novitaApiKey) {
       throw new Error('Add a Novita sandbox API key first.')
     }
 
-    const chat = chats.find((item) => item.id === chatId)
+    const chat = store.chats.find((item) => item.id === chatId)
     if (!chat) {
       throw new Error('Chat not found.')
     }
 
-    addUserMessage(chatId, content)
-    addEvent(chatId, { type: 'user_message', content })
-    const assistantId = startAssistantMessage(chatId)
+    if (connectionRef.current) {
+      connectionRef.current.abort()
+      connectionRef.current = null
+    }
+
+    store.addUserMessage(chatId, content)
+    store.addEvent(chatId, { type: 'user_message', content })
+    const assistantId = store.startAssistantMessage(chatId)
     void assistantId
-    setStatusLabel('Thinking...')
-    setStreaming(true)
-    setIteration(0, 1000)
+    store.setStatusLabel('Thinking...')
+    store.setStreaming(true)
+    store.setIteration(0, 1000)
+    store.setLastEventId(chatId, -1)
 
     const nextHistory = [...chat.modelHistory, { role: 'user' as const, content }]
     await ensureChatSession(chatId, nextHistory)
 
+    const handler = makeHandler(chatId)
+    const payload = getStreamPayload(chatId, content, chat.modelHistory, -1)
+
+    const conn = streamChat(
+      payload,
+      handler,
+      (eventId) => store.setLastEventId(chatId, eventId),
+    )
+    connectionRef.current = conn
+
     try {
-      await streamChat(
-        {
-          chat_id: chatId,
-          user_message: content,
-          history: chat.modelHistory,
-          provider: selectedProvider,
-          model: selectedModel,
-          api_key: providerKey,
-          base_url: providerBaseUrls[selectedProvider],
-          sandbox: {
-            api_key: novitaApiKey,
-            template_id: novitaTemplateId || undefined,
-            provider: 'novita',
-            timeout_seconds: 3600,
-          },
-          max_iterations: 1000,
-          tavily_api_key: tavilyApiKey || undefined,
-          firecrawl_api_key: firecrawlApiKey || undefined,
-        },
-        (event, data) => {
-          addEvent(chatId, { type: event, data })
-          if (event === 'status') {
-            const label = typeof data.label === 'string' ? data.label : 'Working...'
-            setStatusLabel(label)
-          }
-          if (event === 'iteration') {
-            const current = typeof data.current === 'number' ? data.current : 0
-            const limit = typeof data.limit === 'number' ? data.limit : 1000
-            setIteration(current, limit)
-          }
-          if (event === 'sandbox') {
-            const sandboxId = typeof data.sandbox_id === 'string' ? data.sandbox_id : ''
-            const provider = typeof data.provider === 'string' ? data.provider : 'novita'
-            const rootPath = typeof data.root_path === 'string' ? data.root_path : '/home/user'
-            setSandboxInfo(chatId, { sandboxId, provider, rootPath })
-            setStatusLabel('Thinking...')
-          }
-          if (event === 'tool_call') {
-            const dataSessionNames = data.session_names
-            const sessionNames = Array.isArray(dataSessionNames) ? dataSessionNames.filter((s: unknown): s is string => typeof s === 'string') : undefined
-            addToolChip(chatId, {
-              id: createId('tool'),
-              name: typeof data.name === 'string' ? data.name : 'tool',
-              label: typeof data.label === 'string' ? data.label : 'Tool activity',
-              filePath: typeof data.file_path === 'string' ? data.file_path : undefined,
-              command: typeof data.command === 'string' ? data.command : undefined,
-              sessionName: typeof data.session_name === 'string' && data.session_name ? data.session_name : 'default',
-              sessionNames,
-              path: typeof data.path === 'string' ? data.path : undefined,
-              query: typeof data.query === 'string' ? data.query : undefined,
-              url: typeof data.url === 'string' ? data.url : undefined,
-              oldString: typeof data.old_string === 'string' ? data.old_string : undefined,
-              newString: typeof data.new_string === 'string' ? data.new_string : undefined,
-            })
-          }
-          if (event === 'tool_result') {
-            updateLastToolChip(chatId, {
-              ok: typeof data.ok === 'boolean' ? data.ok : undefined,
-              resultData: typeof data.result === 'object' && data.result !== null ? data.result as Record<string, unknown> : undefined,
-            })
-          }
-          if (event === 'subagent_start') {
-            const session = typeof data.session === 'string' ? data.session : 'default'
-            const agent = typeof data.agent === 'string' ? data.agent : 'agent'
-            addSubAgentChip(chatId, {
-              id: createId('subagent'),
-              session,
-              agent,
-              output: '',
-              toolChips: [],
-              status: 'running',
-            })
-          }
-          if (event === 'subagent_token') {
-            const session = typeof data.session === 'string' ? data.session : 'default'
-            const token = typeof data.value === 'string' ? data.value : ''
-            appendSubAgentToken(chatId, session, token)
-          }
-          if (event === 'subagent_tool_call') {
-            const session = typeof data.session === 'string' ? data.session : 'default'
-            const dataSessionNames = data.session_names
-            const sessionNames = Array.isArray(dataSessionNames) ? dataSessionNames.filter((s: unknown): s is string => typeof s === 'string') : undefined
-            addSubAgentToolChip(chatId, session, {
-              id: createId('tool'),
-              name: typeof data.name === 'string' ? data.name : 'tool',
-              label: typeof data.label === 'string' ? data.label : 'Tool activity',
-              filePath: typeof data.file_path === 'string' ? data.file_path : undefined,
-              command: typeof data.command === 'string' ? data.command : undefined,
-              sessionName: typeof data.session_name === 'string' && data.session_name ? data.session_name : 'default',
-              sessionNames,
-              path: typeof data.path === 'string' ? data.path : undefined,
-              query: typeof data.query === 'string' ? data.query : undefined,
-              url: typeof data.url === 'string' ? data.url : undefined,
-              oldString: typeof data.old_string === 'string' ? data.old_string : undefined,
-              newString: typeof data.new_string === 'string' ? data.new_string : undefined,
-            })
-          }
-          if (event === 'subagent_tool_result') {
-            const session = typeof data.session === 'string' ? data.session : 'default'
-            updateLastSubAgentToolChip(chatId, session, {
-              ok: typeof data.ok === 'boolean' ? data.ok : undefined,
-              resultData: typeof data.result === 'object' && data.result !== null ? data.result as Record<string, unknown> : undefined,
-            })
-          }
-          if (event === 'subagent_complete') {
-            const session = typeof data.session === 'string' ? data.session : 'default'
-            updateSubAgentStatus(chatId, session, 'completed')
-          }
-          if (event === 'subagent_error') {
-            const session = typeof data.session === 'string' ? data.session : 'default'
-            const message = typeof data.message === 'string' ? data.message : 'Sub-agent error'
-            updateSubAgentStatus(chatId, session, 'error', message)
-          }
-          if (event === 'reasoning') {
-            const token = typeof data.value === 'string' ? data.value : ''
-            appendAssistantReasoning(chatId, token)
-          }
-          if (event === 'token') {
-            const token = typeof data.value === 'string' ? data.value : ''
-            appendAssistantToken(chatId, token)
-          }
-          if (event === 'message_complete') {
-            const finalContent = typeof data.content === 'string' ? data.content : ''
-            const finalReasoning = typeof data.reasoning === 'string' ? data.reasoning : undefined
-            finalizeAssistantMessage(chatId, finalContent, finalReasoning)
-            setStatusLabel('Ready')
-          }
-          if (event === 'error') {
-            const message = typeof data.message === 'string' ? data.message : 'Unknown error'
-            markAssistantError(chatId, message)
-            setStatusLabel('Issue detected')
-          }
-          if (event === 'done') {
-            setStreaming(false)
-            setStatusLabel('Ready')
-          }
-        },
-      )
+      await conn.promise
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
-      markAssistantError(chatId, message)
-      setStreaming(false)
-      setStatusLabel('Issue detected')
+      store.markAssistantError(chatId, message)
+      store.setStreaming(false)
+      store.setStatusLabel('Issue detected')
       throw error
     }
   }, [
-    activeChatId,
-    addEvent,
-    addToolChip,
-    addSubAgentChip,
-    addSubAgentToolChip,
-    appendSubAgentToken,
-    updateLastSubAgentToolChip,
-    updateSubAgentStatus,
-    addUserMessage,
-    appendAssistantReasoning,
-    appendAssistantToken,
-    chats,
-    finalizeAssistantMessage,
-    markAssistantError,
-    updateLastToolChip,
-    novitaApiKey,
-    novitaTemplateId,
-    tavilyApiKey,
-    firecrawlApiKey,
-    providerBaseUrls,
-    providerKeys,
-    selectedModel,
-    selectedProvider,
-    setIteration,
-    setSandboxInfo,
-    setStatusLabel,
-    setStreaming,
-    startAssistantMessage,
+    store,
+    settings,
+    makeHandler,
+    getStreamPayload,
   ])
 
   return { sendMessage }
