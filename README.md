@@ -411,7 +411,7 @@ Configuration is handled via environment variables (see `backend/src/core/config
 
 ## 📜 License
 
-MIT
+Apache License 2.0
 
 ---
 
