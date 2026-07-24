@@ -17,7 +17,33 @@ File tool policy:
 - Use list_files to list the contents of a directory when you need to discover what files exist.
 - If a file read fails because the path does not exist, reason from the structured tool error and continue.
 
+File editing tools (prefer apply_patch over str_replace):
+- Use **apply_patch** as the primary tool for editing files. It is more robust, token-efficient, and supports multiple changes per call.
+- Use **str_replace** only for simple single-string replacements where apply_patch is unnecessary.
+
+apply_patch tool policy:
+- The `apply_patch` tool accepts a structured patch format for editing files.
+- Use it to add new files, delete files, or update existing files (with optional rename).
+- Format:
+  ```
+  *** Begin Patch
+  *** Add File: /home/user/project/src/file.py
+  +def hello():
+  +    print("Hello, world!")
+  *** Update File: /home/user/project/src/main.py
+  @@
+  -print("Hi")
+  +print("Hello, world!")
+  *** Delete File: /home/user/project/src/obsolete.py
+  *** End Patch
+  ```
+- Always use absolute paths under /home/user/.
+- For updates, always provide 3 lines of context above and below each change.
+- If the target code block appears multiple times, use @@ with a class/function name to disambiguate.
+- Prefer apply_patch over file_write (which overwrites entire files).
+
 str_replace tool policy:
+- Use **only** when you need a quick single-string replacement.
 - You must use file_read at least once before using str_replace. The tool will error if you attempt an edit without reading the file first.
 - When editing text from file_read output, ensure you preserve the exact indentation (tabs/spaces). Never include any part of the line number prefix in the old_string or new_string.
 - ALWAYS prefer editing existing files. NEVER write new files unless explicitly required.

@@ -77,6 +77,57 @@ function FileWriteToolDisplay({ chip }: { chip: ToolChip }) {
   )
 }
 
+function ApplyPatchToolDisplay({ chip }: { chip: ToolChip }) {
+  const resultData = chip.resultData
+  const data = (resultData?.data as Record<string, unknown> | undefined) ?? resultData
+  const operationsRaw = data?.operations as Array<Record<string, unknown>> | undefined
+  const totalOps = data?.total_operations as number | undefined
+  const succeeded = data?.succeeded as number | undefined
+  const isRunning = chip.ok === undefined
+
+  return (
+    <div className="overflow-hidden rounded-[12px] border border-border bg-white shadow-sm">
+      <div className="flex items-center gap-2 px-3 py-2 text-xs">
+        <svg viewBox="0 0 24 24" className="size-3 shrink-0 text-[#858481]" strokeWidth={1.8} fill="none" stroke="currentColor">
+          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <span className="flex-1 truncate text-[12px] text-[#34322d]">{chip.label}</span>
+        {totalOps !== undefined ? (
+          <span className="shrink-0 text-[9px] text-[#858481]">{totalOps} op{totalOps !== 1 ? 's' : ''}</span>
+        ) : null}
+        <span className={`shrink-0 text-[10px] ${isRunning ? 'animate-pulse text-[#858481]' : chip.ok ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+          {isRunning ? 'running...' : chip.ok ? `${succeeded ?? 0} done` : 'error'}
+        </span>
+      </div>
+      {!isRunning && operationsRaw && operationsRaw.length > 0 && (
+        <div className="border-t border-border px-3 py-2 space-y-1.5 bg-[#f5f5f5]">
+          {operationsRaw.map((rawOp, i) => {
+            const opOk = rawOp.ok as boolean
+            const opOperation = rawOp.operation as string
+            const opFilePath = rawOp.file_path as string | undefined
+
+            return (
+              <div key={i} className="flex items-center gap-2 text-[11px]">
+                <span className={`shrink-0 ${opOk ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+                  {opOk ? '+' : '-'}
+                </span>
+                <span className="font-medium text-[#34322d]">{opOperation}</span>
+                <span className="text-[#858481] truncate font-mono">
+                  {opFilePath?.split('/').pop()}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StrReplaceToolDisplay({ chip }: { chip: ToolChip }) {
   const resultData = chip.resultData
   const data = (resultData?.data as Record<string, unknown> | undefined) ?? resultData
@@ -188,6 +239,7 @@ function SubAgentToolChipDisplay({ chip }: { chip: ToolChip }) {
   if (chip.name === 'file_write') return <FileWriteToolDisplay chip={chip} />
   if (chip.name === 'str_replace') return <StrReplaceToolDisplay chip={chip} />
   if (chip.name === 'shall_tool') return <ShallToolDisplay chip={chip} />
+  if (chip.name === 'apply_patch') return <ApplyPatchToolDisplay chip={chip} />
   if (chip.name === 'file_read') return <FileReadToolDisplay chip={chip} />
   if (chip.name === 'list_files') return <ListFilesToolDisplay chip={chip} />
   return (

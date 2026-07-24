@@ -152,6 +152,7 @@ class AgentRunner:
                             old_string = tool_payload.get("old_string")
                             new_string = tool_payload.get("new_string")
                             agent_name = tool_payload.get("agent")
+                            raw_input = tool_payload.get("input")
                             await send(
                                 "tool_call",
                                 {
@@ -165,6 +166,7 @@ class AgentRunner:
                                     "url": url,
                                     "old_string": old_string,
                                     "new_string": new_string,
+                                    "input": raw_input,
                                     "label": self._tool_label(tool_name, file_path, command, list_path, session_names, url=url, agent_name=agent_name),
                                 },
                             )
@@ -350,6 +352,8 @@ class AgentRunner:
             return f"Web Search"
         if tool_name == "fatch_web_urls":
             return f"Fetch: {url or 'url'}"
+        if tool_name == "apply_patch":
+            return f"Apply Patch"
         if tool_name == "str_replace":
             return f"Edit: {file_path or 'unknown'}"
         prefix = "Create" if tool_name == "file_write" else "Read"

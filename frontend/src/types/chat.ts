@@ -15,6 +15,7 @@ export interface ToolChip {
   url?: string
   oldString?: string
   newString?: string
+  input?: string
   ok?: boolean
   resultData?: Record<string, unknown>
 }

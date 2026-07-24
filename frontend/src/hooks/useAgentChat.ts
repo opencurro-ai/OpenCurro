@@ -48,6 +48,7 @@ export function useAgentChat() {
             url: typeof data.url === 'string' ? data.url : undefined,
             oldString: typeof data.old_string === 'string' ? data.old_string : undefined,
             newString: typeof data.new_string === 'string' ? data.new_string : undefined,
+            input: typeof data.input === 'string' ? data.input : undefined,
           })
         }
         if (event === 'tool_result') {
@@ -90,6 +91,7 @@ export function useAgentChat() {
             url: typeof data.url === 'string' ? data.url : undefined,
             oldString: typeof data.old_string === 'string' ? data.old_string : undefined,
             newString: typeof data.new_string === 'string' ? data.new_string : undefined,
+            input: typeof data.input === 'string' ? data.input : undefined,
           })
         }
         if (event === 'subagent_tool_result') {

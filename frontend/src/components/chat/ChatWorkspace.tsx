@@ -276,6 +276,191 @@ function ShellViewOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: b
   )
 }
 
+function ApplyPatchOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: boolean; onToggle: () => void }) {
+  const resultData = chip.resultData
+  const data = (resultData?.data as Record<string, unknown> | undefined) ?? resultData
+  const operationsRaw = data?.operations as Array<Record<string, unknown>> | undefined
+  const totalOps = data?.total_operations as number | undefined
+  const succeeded = data?.succeeded as number | undefined
+  const failed = data?.failed as number | undefined
+  const patchInput = chip.input
+  const isRunning = chip.ok === undefined
+
+  const statusLabel = isRunning ? 'running...' : chip.ok ? 'done' : 'error'
+
+  // Compute rich context from operations
+  const opTypeCounts: Record<string, number> = {}
+  let totalAddedLines = 0
+  let totalRemovedLines = 0
+  const fileNames: string[] = []
+  if (operationsRaw) {
+    for (const rawOp of operationsRaw) {
+      const opType = rawOp.operation as string
+      opTypeCounts[opType] = (opTypeCounts[opType] || 0) + 1
+      const fp = rawOp.file_path as string | undefined
+      if (fp) {
+        const name = fp.split('/').pop()
+        if (name && !fileNames.includes(name)) fileNames.push(name)
+      }
+      const hunks = rawOp.applied_hunks as Array<Record<string, unknown>> | undefined
+      if (hunks) {
+        for (const h of hunks) {
+          totalAddedLines += (h.added_lines as number) || 0
+          totalRemovedLines += (h.removed_lines as number) || 0
+        }
+      }
+    }
+  }
+  const contextParts: string[] = []
+  if (opTypeCounts.add) contextParts.push(`+${opTypeCounts.add} add`)
+  if (opTypeCounts.update) contextParts.push(`~${opTypeCounts.update} edit`)
+  if (opTypeCounts.delete) contextParts.push(`-${opTypeCounts.delete} del`)
+  const opsSummary = contextParts.join(', ')
+
+  return (
+    <div className="overflow-hidden rounded-[18px] border border-border bg-white shadow-sm">
+      <button
+        onClick={onToggle}
+        className={`flex w-full items-center gap-2 px-4 py-3 text-left text-xs transition-colors hover:bg-[rgba(55,53,47,0.04)] ${chip.ok === false ? 'text-[#ef4444]' : 'text-[#34322d]'}`}
+      >
+        <svg viewBox="0 0 24 24" className="size-[14px] shrink-0 text-[#858481]" strokeWidth={1.8} fill="none" stroke="currentColor">
+          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <span className="flex-1 truncate text-[13px]">
+          {chip.label}
+        </span>
+        {/* Rich context badges */}
+        {opsSummary ? (
+          <span className="shrink-0 text-[10px] text-[#858481] font-mono hidden sm:inline">{opsSummary}</span>
+        ) : totalOps !== undefined ? (
+          <span className="shrink-0 text-[10px] text-[#858481]">{totalOps} op{totalOps !== 1 ? 's' : ''}</span>
+        ) : null}
+        {fileNames.length > 0 && (
+          <span className="shrink-0 text-[10px] text-[#858481]/70 font-mono hidden md:inline max-w-[120px] truncate" title={fileNames.join(', ')}>
+            {fileNames.join(', ')}
+          </span>
+        )}
+        {(totalAddedLines > 0 || totalRemovedLines > 0) && (
+          <span className="shrink-0 text-[10px] font-mono">
+            <span className="text-[#059669]">+{totalAddedLines}</span>
+            <span className="text-[#dc2626] ml-0.5">-{totalRemovedLines}</span>
+          </span>
+        )}
+        <span className={`shrink-0 text-[11px] ${isRunning ? 'animate-pulse text-[#858481]' : chip.ok ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+          {statusLabel}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="border-t border-border bg-[#f5f5f5]">
+          {/* --- Raw LLM Patch Input (always visible when expanded) --- */}
+          {patchInput ? (
+            <div className="border-b border-border">
+              <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-[10px] uppercase tracking-wider text-[#858481] font-semibold">
+                <svg viewBox="0 0 24 24" className="size-3" strokeWidth={1.8} fill="none" stroke="currentColor">
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                <span>LLM Patch Input</span>
+                <span className="ml-auto text-[9px] font-mono text-[#858481]/60">{patchInput.split('\n').length} lines</span>
+              </div>
+              <pre className="mx-4 mb-4 whitespace-pre-wrap bg-[#1e1e1e] rounded-[12px] p-4 text-[12px] leading-[1.6] max-h-[400px] overflow-auto shadow-inner">
+                <code className="text-[#d4d4d4]">
+                  {patchInput.split('\n').map((line, i) => {
+                    let lineClass = 'text-[#d4d4d4]'
+                    if (line.startsWith('*** Begin Patch') || line.startsWith('*** End Patch')) {
+                      lineClass = 'text-[#569cd6] font-bold' // blue for markers
+                    } else if (line.startsWith('*** Add File:') || line.startsWith('*** Delete File:') || line.startsWith('*** Update File:') || line.startsWith('*** Move to:')) {
+                      lineClass = 'text-[#c586c0] font-semibold' // purple for file ops
+                    } else if (line.startsWith('@@')) {
+                      lineClass = 'text-[#dcdcaa]' // yellow for hunk headers
+                    } else if (line.startsWith('+')) {
+                      lineClass = 'text-[#4ec9b0]' // green for additions
+                    } else if (line.startsWith('-')) {
+                      lineClass = 'text-[#f44747]' // red for removals
+                    } else if (line.startsWith(' ')) {
+                      lineClass = 'text-[#9cdcfe]/60' // dim for context
+                    }
+                    return (
+                      <div key={i} className={lineClass}>
+                        {line || <span className="select-none">&nbsp;</span>}
+                      </div>
+                    )
+                  })}
+                </code>
+              </pre>
+            </div>
+          ) : null}
+
+          {/* --- Operations Results --- */}
+          <div className="p-4 space-y-3">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-[#858481] font-semibold">
+              <svg viewBox="0 0 24 24" className="size-3" strokeWidth={1.8} fill="none" stroke="currentColor">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+              <span>Results</span>
+              {succeeded !== undefined ? (
+                <span className="ml-auto font-mono text-[9px] text-[#858481]/60">
+                  <span className="text-[#059669]">{succeeded} ok</span>
+                  {failed != null && failed > 0 ? <span className="ml-2 text-[#ef4444]">{failed} failed</span> : null}
+                </span>
+              ) : null}
+            </div>
+            {operationsRaw && operationsRaw.length > 0 ? (
+              <div className="space-y-2">
+                {operationsRaw.map((rawOp, i) => {
+                  const opOk = rawOp.ok as boolean
+                  const opOperation = rawOp.operation as string
+                  const opFilePath = rawOp.file_path as string | undefined
+                  const opMoveTo = rawOp.move_to as string | undefined
+                  const opError = rawOp.error as string | undefined
+                  const appliedHunks = rawOp.applied_hunks as Array<Record<string, unknown>> | undefined
+                  const totalChanges = rawOp.total_changes as number | undefined
+                  const hunkCount = appliedHunks?.length ?? 0
+                  const addedLines = appliedHunks?.reduce((sum: number, h: Record<string, unknown>) => sum + ((h.added_lines as number) || 0), 0) ?? 0
+                  const removedLines = appliedHunks?.reduce((sum: number, h: Record<string, unknown>) => sum + ((h.removed_lines as number) || 0), 0) ?? 0
+
+                  return (
+                    <div key={i} className="rounded-[12px] bg-white border border-border p-3 text-[12px]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`shrink-0 size-[18px] rounded-full grid place-items-center text-[10px] font-bold ${opOk ? 'bg-[#ecfdf5] text-[#059669]' : 'bg-[#fef2f2] text-[#ef4444]'}`}>
+                          {opOk ? '✓' : '✗'}
+                        </span>
+                        <span className="font-semibold text-[#34322d]">{opOperation}</span>
+                        <span className="text-[#858481] truncate font-mono text-[11px]">{opFilePath}</span>
+                        {opMoveTo ? (
+                          <span className="text-[#858481] text-[10px] ml-auto">→ {opMoveTo}</span>
+                        ) : null}
+                      </div>
+                      {!opOk && opError ? (
+                        <div className="text-[#ef4444] text-[11px] mt-1 ml-[26px]">{opError}</div>
+                      ) : null}
+                      {hunkCount > 0 ? (
+                        <div className="mt-1 flex items-center gap-2 text-[10px] text-[#858481] ml-[26px]">
+                          <span>{totalChanges ?? hunkCount} change{((totalChanges ?? hunkCount) !== 1) ? 's' : ''} applied</span>
+                          <span className="text-[#059669]">+{addedLines}</span>
+                          <span className="text-[#dc2626]">-{removedLines}</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : succeeded !== undefined ? (
+              <div className="text-[11px] text-[#858481] italic">No individual operation details available.</div>
+            ) : null}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StrReplaceOutput({ chip, isOpen, onToggle }: { chip: ToolChip; isOpen: boolean; onToggle: () => void }) {
   const resultData = chip.resultData
   const data = (resultData?.data as Record<string, unknown> | undefined) ?? resultData
@@ -489,6 +674,10 @@ export function ChatWorkspace({
                         ) : tool.name === 'str_replace' ? (
                           <div key={tool.id} className="w-full max-w-xl">
                             <StrReplaceOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
+                          </div>
+                        ) : tool.name === 'apply_patch' ? (
+                          <div key={tool.id} className="w-full max-w-xl">
+                            <ApplyPatchOutput chip={tool} isOpen={openTerminals.has(tool.id)} onToggle={() => toggleTerminal(tool.id)} />
                           </div>
                         ) : (
                           <span key={tool.id} className={`inline-flex items-center gap-2 px-3 py-[6px] rounded-full bg-white border border-border text-xs text-[#34322d] shadow-sm ${tool.ok === false ? 'border-red-300 bg-red-50 text-red-600' : ''}`}>
